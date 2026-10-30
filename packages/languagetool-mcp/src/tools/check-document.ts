@@ -22,11 +22,12 @@ import { MAX_MCP_RESULT_BYTES, toolFailure, toolSuccess } from './results.js';
  */
 
 /**
- * Longest document accepted, in UTF-16 code units: three check_text requests, about 22,000 words.
- * French, the slowest language measured, took about 7 s per 48,000-unit chunk on a warm server:
- * about 25 s for a document at the limit, 35 s when the language is cold.
+ * Longest document accepted, in UTF-16 code units: two check_text requests, about 15,000 words.
+ * French, the slowest language measured, took 12 s at this length on a warm server and 20 s on a
+ * freshly started one, leaving about three times that under the 60 s default request timeout of the
+ * MCP SDK clients. At 150,000 units it took up to 42 s (fresh server, loaded machine): too close.
  */
-export const MAX_DOCUMENT_LENGTH = 3 * DEFAULT_MAX_TEXT_LENGTH;
+export const MAX_DOCUMENT_LENGTH = 2 * DEFAULT_MAX_TEXT_LENGTH;
 
 /** Text sent on each side of an artificial cut: several whole sentences of prose. */
 export const DOCUMENT_CONTEXT_LENGTH = 1_000;
@@ -35,12 +36,13 @@ export const DOCUMENT_CONTEXT_LENGTH = 1_000;
  * Issues returned at most: three times the densest rate measured (5.5 per 1,000 units, French,
  * picky level) over a document at the limit.
  */
-export const MAX_DOCUMENT_ISSUES = 2_500;
+export const MAX_DOCUMENT_ISSUES = 1_650;
 
 /**
- * Serialized size of the returned issues, counting both copies made by toolSuccess. Enough for
- * MAX_DOCUMENT_ISSUES issues of the 95th-percentile measured size (about 1.7 KB), so the count is
- * the usual limit; half of MAX_MCP_RESULT_BYTES, leaving the rest of the result far below it.
+ * Serialized size of the returned issues, counting both copies made by toolSuccess: half of
+ * MAX_MCP_RESULT_BYTES, leaving the rest of the result far below it. That is room for
+ * MAX_DOCUMENT_ISSUES issues of about 2.5 KB; the measured 95th percentile is about 1.7 KB, so in
+ * ordinary text the count is the limit and this budget only stops unusually large issues.
  */
 export const MAX_DOCUMENT_ISSUE_BYTES = MAX_MCP_RESULT_BYTES / 2;
 

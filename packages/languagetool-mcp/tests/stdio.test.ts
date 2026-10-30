@@ -269,14 +269,14 @@ describe('production stdio server (dist/index.js)', () => {
 
   it('checks a long document with offsets in the whole document', async () => {
     const calls = languageTool.requests.length;
-    const text = longDocument(2_800);
-    expect(text.length).toBeGreaterThan(2 * DEFAULT_MAX_TEXT_LENGTH);
+    const text = longDocument(1_800);
+    expect(text.length).toBeGreaterThan(DEFAULT_MAX_TEXT_LENGTH);
     const result = await session.callTool('check_document', { text, language: 'en-US' });
 
     expect(result.isError).toBeFalsy();
     const content = result.structuredContent as { chunkCount: number; complete: boolean; issues: Array<{ offset: number }> };
     expect(content.complete).toBe(true);
-    expect(content.chunkCount).toBeGreaterThanOrEqual(3);
+    expect(content.chunkCount).toBeGreaterThanOrEqual(2);
     expect(content.issues.map((issue) => issue.offset)).toEqual(tehOffsets(text));
     expect(JSON.parse(result.content[0]!.text)).toEqual(content);
     expect(languageTool.requests.length).toBe(calls + content.chunkCount);
@@ -294,7 +294,7 @@ describe('production stdio server (dist/index.js)', () => {
 
   it('returns a partial document result without the content of the failed chunk', async () => {
     // The chunk holding MARKER gets an HTTP 500 echoing it; the remaining chunks are skipped.
-    const text = longDocument(2_800, { 1_500: MANUSCRIPT });
+    const text = longDocument(1_800, { 1_400: MANUSCRIPT });
     const result = await session.callTool('check_document', { text, language: 'en-US' });
 
     expect(result.isError).toBeFalsy();
@@ -307,7 +307,7 @@ describe('production stdio server (dist/index.js)', () => {
   });
 
   it('bounds a large document result and keeps serving the connection', async () => {
-    const text = 'BIGISSUES. A sentence with one teh in it, and more words. '.repeat(2_500);
+    const text = 'BIGISSUES. A sentence with one teh in it, and more words. '.repeat(1_700);
     const response = await session.request('tools/call', { name: 'check_document', arguments: { text, language: 'en-US' } });
     const result = response.result as unknown as ToolResult;
 
@@ -382,7 +382,7 @@ describe('official MCP client on protocol revision 2026-07-28 (dist/index.js)', 
   });
 
   it('checks a long document and reports progress for each chunk', async () => {
-    const text = longDocument(2_800);
+    const text = longDocument(1_800);
     const progress: Array<{ progress: number; total?: number }> = [];
     const result = await client.callTool(
       { name: 'check_document', arguments: { text, language: 'en-US' } },
@@ -415,7 +415,7 @@ describe('official MCP client on protocol revision 2026-07-28 (dist/index.js)', 
   it('keeps the manuscript out of results and stderr when a chunk fails', async () => {
     const result = await client.callTool({
       name: 'check_document',
-      arguments: { text: longDocument(2_800, { 1_500: MANUSCRIPT }), language: 'en-US' },
+      arguments: { text: longDocument(1_800, { 1_400: MANUSCRIPT }), language: 'en-US' },
     });
 
     expect(result.structuredContent).toMatchObject({ complete: false });

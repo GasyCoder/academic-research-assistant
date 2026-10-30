@@ -313,7 +313,8 @@ describe('check_document output budget', () => {
 
 describe('check_document length limit', () => {
   it('advertises the limit in its input schema', () => {
-    expect(MAX_DOCUMENT_LENGTH).toBe(150_000);
+    expect(MAX_DOCUMENT_LENGTH).toBe(100_000);
+    expect(MAX_DOCUMENT_ISSUES).toBe(1_650);
     expect(checkDocumentInputSchema.safeParse(input('x'.repeat(MAX_DOCUMENT_LENGTH + 1))).success).toBe(true);
     expect(checkDocumentInputSchema.safeParse(input('   ')).success).toBe(false);
   });
@@ -325,7 +326,7 @@ describe('check_document length limit', () => {
     const result = await runCheckDocument(new LanguageToolClient({ baseUrl: TEST_BASE_URL, timeoutMs: 5000, fetch: fake.fetch }), input(text));
 
     expect(result).toMatchObject({ complete: true, documentLength: MAX_DOCUMENT_LENGTH });
-    expect(result.chunkCount).toBe(4);
+    expect(result.chunkCount).toBe(3);
   });
 
   it('rejects a longer document with TEXT_TOO_LONG before any request', async () => {
