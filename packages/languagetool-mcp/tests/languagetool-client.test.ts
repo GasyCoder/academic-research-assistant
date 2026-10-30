@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { LanguageToolError } from '../src/errors.js';
-import type { FetchLike } from '../src/languagetool-client.js';
+import { DEFAULT_MAX_TEXT_LENGTH, type FetchLike, LanguageToolClient } from '../src/languagetool-client.js';
 import {
+  emptyCheckResponse,
   englishCheckResponse,
   englishText,
   infoResponse,
@@ -122,6 +123,49 @@ describe('LanguageToolClient.check', () => {
     const fetchMock = routeFetch({ 'POST /v2/check': () => jsonResponse({ unexpected: true }) });
     const error = await captureError(createClient(fetchMock).check({ text: secret, language: 'en' }));
     expect(JSON.stringify(error.toDetails())).not.toContain(secret);
+  });
+});
+
+describe('LanguageToolClient text length limit', () => {
+  const limitedClient = (fetchImpl: FetchLike, maxTextLength: number) =>
+    new LanguageToolClient({ baseUrl: TEST_BASE_URL, timeoutMs: 1000, fetch: fetchImpl, maxTextLength });
+
+  it('uses a documented default', () => {
+    expect(DEFAULT_MAX_TEXT_LENGTH).toBe(50_000);
+    expect(createClient(routeFetch({})).maxTextLength).toBe(DEFAULT_MAX_TEXT_LENGTH);
+  });
+
+  it('sends a text of exactly the limit unchanged', async () => {
+    const fetchMock = routeFetch({ 'POST /v2/check': () => jsonResponse(emptyCheckResponse) });
+    await limitedClient(fetchMock, 10).check({ text: '0123456789', language: 'en' });
+    expect((fetchMock.mock.calls[0]![1].body as URLSearchParams).get('text')).toBe('0123456789');
+  });
+
+  it('rejects a longer text with TEXT_TOO_LONG before contacting LanguageTool', async () => {
+    const fetchMock = routeFetch({ 'POST /v2/check': () => jsonResponse(emptyCheckResponse) });
+    const error = await captureError(limitedClient(fetchMock, 10).check({ text: 'SECRET-123X', language: 'en' }));
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(error.toDetails()).toEqual({
+      code: 'TEXT_TOO_LONG',
+      message:
+        'Text has 11 characters (UTF-16 code units), above the 10-character limit per check; ' +
+        'split it and check the parts separately',
+      endpoint: '/v2/check',
+      httpStatus: null,
+    });
+    expect(error.message).not.toContain('SECRET');
+  });
+
+  it('counts the limit in UTF-16 code units, like issue offsets', async () => {
+    const fetchMock = routeFetch({ 'POST /v2/check': () => jsonResponse(emptyCheckResponse) });
+    const client = limitedClient(fetchMock, 4);
+
+    await client.check({ text: '😀😀', language: 'en' });
+    const error = await captureError(client.check({ text: '😀😀a', language: 'en' }));
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(error.code).toBe('TEXT_TOO_LONG');
   });
 });
 

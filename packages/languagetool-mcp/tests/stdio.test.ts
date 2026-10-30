@@ -16,6 +16,7 @@ import {
 } from '@modelcontextprotocol/server';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { DEFAULT_MAX_TEXT_LENGTH } from '../src/languagetool-client.js';
 import { emptyCheckResponse, infoResponse, languagesResponse } from './fixtures/languagetool-responses.js';
 import { type TestHttpServer, startHttpServer } from './http-server.js';
 
@@ -204,6 +205,16 @@ describe('production stdio server (dist/index.js)', () => {
         httpStatus: 500,
       },
     });
+  });
+
+  it('rejects a text above the length limit with TEXT_TOO_LONG, without contacting LanguageTool', async () => {
+    const languageToolCalls = languageTool.requests.length;
+    const text = `${MANUSCRIPT} `.padEnd(DEFAULT_MAX_TEXT_LENGTH + 1, 'Lorem ipsum dolor sit amet. ');
+    const result = await session.callTool('check_text', { text, language: 'en-US' });
+
+    expect(result.isError).toBe(true);
+    expect(JSON.parse(result.content[0]!.text).error).toMatchObject({ code: 'TEXT_TOO_LONG', httpStatus: null });
+    expect(languageTool.requests.length).toBe(languageToolCalls);
   });
 
   it('writes only MCP messages to stdout and never the manuscript to stdout or stderr', () => {

@@ -96,6 +96,29 @@ so `health_check` reports `unavailable` until LanguageTool is ready.
   while streaming, with an `INVALID_RESPONSE` error.
 - Issue ranges outside the submitted text, or context ranges outside their context
   text, are rejected as `INVALID_RESPONSE`.
+- `check_text` accepts at most 50,000 characters (`DEFAULT_MAX_TEXT_LENGTH`, see below).
+  A longer text is rejected with `TEXT_TOO_LONG` before anything is sent, and is never
+  truncated.
+
+## Text length limit
+
+LanguageTool's server has no length limit by default (`maxTextLength` is unset) and the
+stdio transport has none either, so this server sets one: 50,000 characters, counted in
+UTF-16 code units like issue offsets. That is about 7,500 words, e.g. a journal article
+or a thesis chapter section. The value comes from measurements on LanguageTool
+6.9-SNAPSHOT:
+
+- 50,000 characters of French take about 4 s on a warm server, and about 9 s when the
+  language is cold, well within the 30 s default timeout.
+- Ordinary prose produces about 4 bytes of response per character (about 0.2 MB). A text
+  with a spelling error on every word produces about 100 bytes per character (about 5 MB),
+  still within the 8 MiB response limit; at 100,000 characters it already exceeded it.
+- A text checked against the wrong language is the exception: LanguageTool then suggests
+  hundreds of replacements per word, and the response exceeds 8 MiB beyond about 17,000
+  characters (French checked as `en-US`). This is reported as `INVALID_RESPONSE`.
+
+The limit is advertised as `maxLength` in the `check_text` input schema. Until built-in
+splitting of long documents is available, callers must split longer texts themselves.
 
 ## Tools
 
@@ -123,7 +146,7 @@ No input. Returns the languages installed on the server (`/v2/languages`):
 
 | Input                | Required | Description                                                       |
 | -------------------- | -------- | ----------------------------------------------------------------- |
-| `text`               | yes      | Text to analyse; must not be empty or whitespace only.            |
+| `text`               | yes      | Text to analyse; not blank; at most 50,000 UTF-16 code units.     |
 | `language`           | yes      | A `longCode` from `get_supported_languages` (e.g. `fr`, `en-US`), or `auto`. |
 | `level`              | no       | `default` or `picky` (enables stricter LanguageTool rules).        |
 | `disabledRules`      | no       | LanguageTool rule ids to ignore.                                   |
@@ -137,8 +160,8 @@ and `categoryName`. Offsets are UTF-16 code units, i.e. JavaScript string indice
 
 ### Errors
 
-When LanguageTool cannot be used, `check_text` and `get_supported_languages`
-return an MCP error result (`isError: true`) whose text is JSON:
+When LanguageTool cannot be used, or the text is too long, `check_text` and
+`get_supported_languages` return an MCP error result (`isError: true`) whose text is JSON:
 
 ```json
 { "error": { "code": "UNREACHABLE", "message": "LanguageTool is unreachable at http://127.0.0.1:8081 (ECONNREFUSED)", "endpoint": "/v2/check", "httpStatus": null } }
@@ -146,8 +169,13 @@ return an MCP error result (`isError: true`) whose text is JSON:
 
 Codes: `TIMEOUT`, `UNREACHABLE`, `HTTP_ERROR` (e.g. unknown language → 400, or a
 redirect), `INVALID_RESPONSE` (invalid, incomplete, inconsistent or oversized
-response), `INTERNAL_ERROR`. `httpStatus` is non-null whenever LanguageTool sent
-response headers.
+response), `TEXT_TOO_LONG` (the text exceeds the length limit; nothing was sent, and
+the message gives the text's length and the limit, never its content), `INTERNAL_ERROR`.
+`httpStatus` is non-null whenever LanguageTool sent response headers.
+
+Arguments that do not match the input schema (blank text, malformed language code,
+unknown `level`) are rejected by the MCP SDK before the tool runs, with a plain-text
+`Input validation error: …` result (`isError: true`).
 
 ## Minimal usage
 
