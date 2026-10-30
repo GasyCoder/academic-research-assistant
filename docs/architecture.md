@@ -19,87 +19,25 @@ AI Client
           +-- LanguageTool MCP
                  |
                  +-- Local LanguageTool Server
+```
 
----
+## Layers
 
-# 10. Roadmap
+### MCP tools
 
-```bash
-cat > docs/roadmap.md <<'EOF'
-# Roadmap
+Deterministic technical capabilities, such as linguistic analysis.
 
-## Phase 0 — Foundation
+MCP servers contain no academic-domain reasoning: they know nothing about
+thesis structure, citation styles, disciplines, methodologies, universities
+or research topics.
 
-- Repository structure
-- Architecture documentation
-- Agent guidelines
-- Development conventions
+### Academic Skills
 
-## Phase 1 — LanguageTool MCP
+Academic reasoning and contextual guidance. Skills interpret discipline,
+methodology, document type, academic language, citation style and journal
+requirements, and decide how to use the results returned by MCP tools.
 
-Implement minimal MCP server with:
+### Research Profile
 
-- health_check
-- get_supported_languages
-- check_text
-
-## Phase 2 — MCP quality
-
-- unit tests
-- integration tests
-- error handling
-- structured responses
-- local LanguageTool configuration
-
-## Phase 3 — Academic Writing Skill
-
-Generic scientific writing guidance.
-
-## Phase 4 — Research Profile
-
-Dynamic configuration for:
-
-- discipline
-- methodology
-- document type
-- language
-- citation style
-
-## Phase 5 — Scientific Review
-
-Structured manuscript review.
-
-## Phase 6 — Citation Integrity
-
-Reference and citation safeguards.
-
-## Phase 7 — Discipline Profiles
-
-Optional discipline-specific extensions.
-
-## Phase 8 — Document Formats
-
-Potential support for:
-
-- Markdown
-- LaTeX
-- DOCX
-
-## Phase 9 — Research ecosystem integrations
-
-Potential integrations:
-
-- Zotero
-- Crossref
-- OpenAlex
-- DOI validation
-- Vale
-
-## Phase 10 — Distribution
-
-- documentation
-- examples
-- CI
-- release process
-- MCP distribution
-- Claude Code plugin packaging
+Dynamic, project-specific context of the researcher. It is configurable and
+never hard-coded into reusable Skills or MCP servers.

@@ -36,6 +36,7 @@ runtime/
 
 # Test output
 test-results/
+.vitest/
 
 # Generated academic workspace
 .academic/
