@@ -112,9 +112,11 @@ liveness; readiness of a particular language and configuration requires a succes
   10 MiB stdio receive buffer. The connection remains usable for a shorter check.
 - Issue ranges outside the submitted text, or context ranges outside their context
   text, are rejected as `INVALID_RESPONSE`.
-- `check_text` accepts at most 50,000 characters (`DEFAULT_MAX_TEXT_LENGTH`, see below).
-  A longer text is rejected with `TEXT_TOO_LONG` before anything is sent, and is never
-  truncated.
+- `check_text` accepts at most 50,000 characters (`DEFAULT_MAX_TEXT_LENGTH`, see below)
+  and `check_document` 100,000 (`MAX_DOCUMENT_LENGTH`). A longer text is rejected with
+  `TEXT_TOO_LONG` before anything is sent, and is never truncated.
+- `check_document` sends its parts one at a time, and its `failedRanges` carry positions
+  and error codes only, never document text.
 
 ## Text length limit
 
@@ -139,8 +141,109 @@ These measurements do not guarantee that every accepted text produces a delivera
 Even a response below the HTTP limit can exceed the separate MCP result-size budget after
 normalization and duplication; that also returns `INVALID_RESPONSE`, without partial diagnostics.
 
-The limit is advertised as `maxLength` in the `check_text` input schema. Until built-in
-splitting of long documents is available, callers must split longer texts themselves.
+The limit is advertised as `maxLength` in the `check_text` input schema. For a longer
+text, use `check_document`.
+
+## Long documents
+
+| Tool             | Use for                                 | Limit (UTF-16 code units) |
+| ---------------- | --------------------------------------- | ------------------------- |
+| `check_text`     | one text, checked in a single request   | 50,000                    |
+| `check_document` | a longer document, checked part by part | 100,000                   |
+
+`check_document` takes the same inputs as `check_text` and returns the issues of the whole
+document, with offsets in the whole document. It splits the document internally and sends
+the parts to LanguageTool one at a time; the caller never handles the parts.
+
+### Segmentation
+
+- Each request carries at most 50,000 units: a core of at most 48,000 units, plus up to
+  1,000 units of context on each side of an artificial cut.
+- Cuts are chosen, best first: blank-line paragraph break, line break, sentence boundary
+  (`Intl.Segmenter` with the requested language; default rules for `auto` or a code it does
+  not know), breakable whitespace (no-break spaces are kept), grapheme boundary. The latest
+  cut of the best kind in the second half of the core budget is used.
+- A cut never splits a surrogate pair, a grapheme cluster such as an emoji sequence, or a CRLF.
+- Context is added only at artificial cuts, i.e. anything but a paragraph break: whole
+  sentences of the same paragraph, so that LanguageTool sees complete sentences and paired
+  brackets around the cut. A paragraph break gets none.
+
+### Offsets and duplicates
+
+- `offset` = start of the part's request in the document + LanguageTool's offset, in UTF-16
+  code units like `check_text`; every range is then checked to lie within the document.
+  `context.offset` stays relative to `context.text`.
+- A part reports only the issues that start in its core. An issue found in a context region
+  belongs to the neighbouring part, which reports it with its own context. No issue is
+  returned twice, and different issues at the same offset are all kept.
+
+### Result
+
+| Field                                                                        | Meaning                                                                                                                                                                      |
+| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `complete`                                                                   | `true` only if every part was checked and every diagnostic found is returned.                                                                                                |
+| `truncated`, `truncatedAt`                                                   | The output budget was reached. Every issue before `truncatedAt` is returned, none at or after it, and the remaining parts were not checked.                                  |
+| `failedRanges`                                                               | Parts without diagnostics: `chunkIndex`, `start`, `end` (document offsets) and `code`, the error of the request or `SKIPPED` (not sent because processing stopped). No text. |
+| `chunkCount`, `processedChunkCount`, `failedChunkCount`, `skippedChunkCount` | The three counts add up to `chunkCount`.                                                                                                                                     |
+| `issues`                                                                     | In document order, at most 5 replacements each; `replacementsTruncated` tells when LanguageTool suggested more.                                                              |
+| `languages`, `software`, `incompleteResults`                                 | Languages LanguageTool used (several only with `auto` on a mixed document), its version, and whether it reported incomplete results for a part.                              |
+
+### Failures
+
+- The parts are sent sequentially, each at most once; nothing is retried.
+- `INVALID_RESPONSE` concerns one part's answer (e.g. a response over 8 MiB for an
+  error-dense part): the part is listed in `failedRanges` and the next parts are checked.
+- `TIMEOUT`, `UNREACHABLE` and `HTTP_ERROR` would repeat or add load: the remaining parts
+  are `SKIPPED`.
+- If no part could be checked, the tool returns the first error as an MCP error result
+  rather than an empty result, which would look like a clean document.
+- A document over 100,000 units is rejected with `TEXT_TOO_LONG` before anything is sent.
+
+### Limits
+
+| Limit                        | Value          | Basis                                                          |
+| ---------------------------- | -------------- | -------------------------------------------------------------- |
+| Request (core + context)     | 50,000         | the `check_text` limit, reused per part                        |
+| Core of a part               | 48,000         | request limit minus context on both sides                      |
+| Context at an artificial cut | 1,000 per side | several whole sentences of prose                               |
+| Document                     | 100,000        | French: 12 s warm, 20 s on a fresh server                      |
+| Issues                       | 1,650          | 3 × 5.5 issues per 1,000 units (densest measured) at the limit |
+| Serialized issues            | 4 MiB          | half of `MAX_MCP_RESULT_BYTES`, both copies counted            |
+| Replacements per issue       | 5              | only spelling rules exceeded it (5 of 1,532 issues)            |
+
+Measured on LanguageTool 6.9-SNAPSHOT (12-core machine) with generic academic prose,
+including typical errors, through `check_document` and its MCP result serialization:
+
+| 100,000 units                | Parts | Duration    | Issues                            | Result  | Peak RSS |
+| ---------------------------- | ----- | ----------- | --------------------------------- | ------- | -------- |
+| French, warm                 | 3     | 10.8–12.2 s | 467, complete                     | 641 KiB | 74 MiB   |
+| French, fresh server         | 3     | 20.1 s      | 460, complete                     | —       | —        |
+| English, warm                | 3     | 2.6 s       | 456, complete                     | 555 KiB | 79 MiB   |
+| French checked as `en-US`    | 3     | 22.9 s      | 416; 2 parts `INVALID_RESPONSE`   | 522 KiB | 109 MiB  |
+| Spelling error on every word | 3     | 2.1 s       | 1,650, truncated; 2 parts skipped | 1.8 MiB | 128 MiB  |
+
+At 150,000 units the same French check took 16–26 s warm and up to 42 s on a fresh server
+with a second JVM running: too close to common client timeouts for a synchronous call.
+
+### Client timeouts and progress
+
+The call lasts as long as all its requests, each bounded by `LANGUAGETOOL_TIMEOUT_MS`. Whether
+that fits depends on the calling client's tool-call timeout, which varies by client: the
+TypeScript MCP SDK defaults to 60 s, other clients differ. Configure it above the durations
+above, with headroom for cold starts.
+
+When the request carries a `progressToken`, the server sends a `notifications/progress`
+after each part (`progress`, `total`). Clients that support it can extend their timeout on
+progress (`resetTimeoutOnProgress` in the TypeScript SDK). If the caller cancels the
+request, no further part is sent.
+
+### Effect of the cuts
+
+Compared with a single request over the same text (150,000 units of generic academic prose,
+4 parts): English gave identical issues (427); French returned 708 of 710, missing two
+`FR_REPEATEDWORDS_*` style hints, which look for repetitions across paragraphs. No cut ever
+produced an extra issue, including with 3,000-unit requests; there, inside a single long
+paragraph, the context at artificial cuts reduced the missed style hints from 7 to 3.
 
 ## Tools
 
@@ -180,10 +283,21 @@ Returns `requestedLanguage`, `language` (used by LanguageTool), `detectedLanguag
 `context`, `ruleId`, `ruleSubId`, `ruleDescription`, `issueType`, `categoryId`
 and `categoryName`. Offsets are UTF-16 code units, i.e. JavaScript string indices.
 
+### `check_document`
+
+Same inputs as `check_text`, except that `text` may hold up to 100,000 UTF-16 code units.
+Returns `requestedLanguage`, `languages`, `software`, `documentLength`, `complete`,
+`truncated`, `truncatedAt`, `incompleteResults`, `chunkCount`, `processedChunkCount`,
+`failedChunkCount`, `skippedChunkCount`, `failedRanges`, `issueCount` and `issues`. Issues
+have the fields of `check_text` issues, with offsets in the whole document, plus
+`replacementsTruncated`. See [Long documents](#long-documents).
+
 ### Errors
 
-When LanguageTool cannot be used, or the text is too long, `check_text` and
-`get_supported_languages` return an MCP error result (`isError: true`) whose text is JSON:
+When LanguageTool cannot be used, or the text is too long, `check_text`, `check_document`
+and `get_supported_languages` return an MCP error result (`isError: true`) whose text is JSON.
+For `check_document` this happens only when no part of the document could be checked;
+otherwise failures are reported in `failedRanges`:
 
 ```json
 { "error": { "code": "UNREACHABLE", "message": "LanguageTool is unreachable at http://127.0.0.1:8081 (ECONNREFUSED)", "endpoint": "/v2/check", "httpStatus": null } }
@@ -259,8 +373,10 @@ npm test                    # unit and stdio tests, no LanguageTool server neede
 npm run test:integration    # optional, against LANGUAGETOOL_BASE_URL
 ```
 
-`npm test` builds the package and runs `dist/index.js` as a subprocess. The same
-scripts work from `packages/languagetool-mcp/`, or from the root with
+`npm test` builds the package and runs `dist/index.js` as a subprocess, both with raw
+stdio framing in the 2025 handshake mode and with the official v2 client
+(`@modelcontextprotocol/client`, a dev dependency) pinned to protocol revision
+2026-07-28. The same scripts work from `packages/languagetool-mcp/`, or from the root with
 `-w @gasycoder/languagetool-mcp`.
 
 ## Source layout
@@ -273,7 +389,8 @@ src/
   languagetool-client.ts   HTTP client (timeouts, error mapping)
   languagetool-schemas.ts  validation of raw LanguageTool responses
   transform.ts             raw responses → tool results
+  segmentation.ts          long-document segmentation (cuts, context)
   types.ts                 tool output schemas
   errors.ts                LanguageToolError
-  tools/                   one module per MCP tool
+  tools/                   one module per MCP tool, plus shared check options and results
 ```
