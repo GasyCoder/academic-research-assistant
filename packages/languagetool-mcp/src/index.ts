@@ -14,6 +14,16 @@ function logError(message: string): void {
 }
 
 function main(): void {
+  // Node would otherwise print the message and stack of an uncaught error, which may quote request content.
+  process.on('uncaughtException', (error) => {
+    logError(`fatal error (${error.name})`);
+    process.exit(1);
+  });
+  process.on('unhandledRejection', (reason) => {
+    logError(`fatal error (${reason instanceof Error ? reason.name : typeof reason})`);
+    process.exit(1);
+  });
+
   let config;
   try {
     config = loadConfig();

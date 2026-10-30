@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { InMemoryTransport, type JSONRPCMessage } from '@modelcontextprotocol/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { FetchLike } from '../src/languagetool-client.js';
+import type { FetchLike, LanguageToolClient } from '../src/languagetool-client.js';
 import { SERVER_NAME, SERVER_VERSION, createServer } from '../src/server.js';
 import { englishCheckResponse, englishText } from './fixtures/languagetool-responses.js';
 import { connectionRefused, createClient, jsonResponse, routeFetch } from './helpers.js';
@@ -12,8 +12,8 @@ import { connectionRefused, createClient, jsonResponse, routeFetch } from './hel
 type JsonRpcResult = { id: number; result?: Record<string, unknown>; error?: { message: string } };
 
 /** Minimal JSON-RPC peer over an in-memory transport, so tests need no MCP client dependency. */
-async function connect(fetchImpl: FetchLike) {
-  const server = createServer(createClient(fetchImpl));
+async function connect(fetchImpl: FetchLike, client: LanguageToolClient = createClient(fetchImpl)) {
+  const server = createServer(client);
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   const pending = new Map<number, (message: JsonRpcResult) => void>();
   clientTransport.onmessage = (message) => {
@@ -122,6 +122,20 @@ describe('MCP server', () => {
 
     expect(response.result?.isError).toBeFalsy();
     expect(response.result?.structuredContent).toMatchObject({ status: 'unavailable', reachable: false });
+  });
+});
+
+describe('unexpected exceptions', () => {
+  it('does not let a tool handler leak an exception message', async () => {
+    const secret = 'UNPUBLISHED-MANUSCRIPT-SENTENCE';
+    const client = createClient(routeFetch({}));
+    client.healthcheck = () => Promise.reject(new Error(secret));
+    const session = await connect(routeFetch({}), client);
+    close = session.close;
+    const response = await session.request('tools/call', { name: 'health_check', arguments: {} });
+
+    expect(response.result?.isError).toBe(true);
+    expect(JSON.stringify(response)).not.toContain(secret);
   });
 });
 

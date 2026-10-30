@@ -77,20 +77,20 @@ describe('LanguageToolClient.check', () => {
     expect(error.httpStatus).toBeNull();
   });
 
-  it('reports HTTP_ERROR with status and server message for non-2xx answers', async () => {
+  it('reports HTTP_ERROR with status and a controlled message for non-2xx answers', async () => {
     const fetchMock = routeFetch({
       'POST /v2/check': () => textResponse("Error: 'xx-YY' is not a language code known to LanguageTool.", 400),
     });
     const error = await captureError(createClient(fetchMock).check({ text: 'Hello', language: 'xx-YY' }));
     expect(error.code).toBe('HTTP_ERROR');
     expect(error.httpStatus).toBe(400);
-    expect(error.message).toContain("'xx-YY' is not a language code");
+    expect(error.message).toBe('LanguageTool answered HTTP 400 (request rejected, e.g. unknown language code or rule id)');
   });
 
-  it('truncates long error bodies', async () => {
-    const fetchMock = routeFetch({ 'POST /v2/check': () => textResponse('x'.repeat(5000), 500) });
-    const error = await captureError(createClient(fetchMock).check({ text: 'Hello', language: 'en' }));
-    expect(error.message.length).toBeLessThan(400);
+  it('asks fetch not to follow redirects', async () => {
+    const fetchMock = routeFetch({ 'POST /v2/check': () => jsonResponse(englishCheckResponse) });
+    await createClient(fetchMock).check({ text: englishText, language: 'en-US' });
+    expect(fetchMock.mock.calls[0]![1].redirect).toBe('manual');
   });
 
   it('reports INVALID_RESPONSE for a non-JSON body', async () => {

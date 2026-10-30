@@ -27,12 +27,11 @@ export interface CheckRequest {
   disabledCategories?: readonly string[];
 }
 
-/** Maximum number of characters of a LanguageTool error body kept in error messages. */
-const MAX_ERROR_BODY_LENGTH = 300;
-
 /**
  * Thin HTTP client for the LanguageTool v2 API.
- * Every failure is reported as a LanguageToolError; no method rewrites or logs the text.
+ * Every failure is reported as a LanguageToolError whose message is built from
+ * controlled technical data only: never the text, and never a body sent by the server.
+ * Redirects are never followed, so the text cannot be forwarded to another origin.
  */
 export class LanguageToolClient {
   readonly baseUrl: string;
@@ -102,9 +101,10 @@ export class LanguageToolClient {
 
     const parsed = schema.safeParse(json);
     if (!parsed.success) {
+      // Paths come from our schemas and issue codes from Zod: no value of the payload is quoted.
       const problems = parsed.error.issues
         .slice(0, 5)
-        .map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`)
+        .map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.code}`)
         .join('; ');
       throw new LanguageToolError('INVALID_RESPONSE', `LanguageTool returned an unexpected JSON structure (${problems})`, {
         endpoint,
@@ -119,19 +119,25 @@ export class LanguageToolClient {
     headers.set('Accept', 'application/json');
     let response: Response;
     try {
-      response = await this.fetchImpl(`${this.baseUrl}${endpoint}`, { ...init, headers, signal });
+      response = await this.fetchImpl(`${this.baseUrl}${endpoint}`, {
+        ...init,
+        headers,
+        signal,
+        // A followed 307/308 would resend the text to the Location origin.
+        redirect: 'manual',
+      });
     } catch (error) {
       throw this.toTransportError(error, endpoint);
     }
 
     if (!response.ok) {
-      const detail = await this.readBody(response, endpoint, signal).catch(() => '');
-      const summary = detail.trim().slice(0, MAX_ERROR_BODY_LENGTH);
-      throw new LanguageToolError(
-        'HTTP_ERROR',
-        `LanguageTool answered HTTP ${response.status}${summary ? `: ${summary}` : ''}`,
-        { endpoint, httpStatus: response.status },
-      );
+      // Error bodies may echo the submitted text: discard them unread.
+      await response.body?.cancel().catch(() => undefined);
+      const status = response.type === 'opaqueredirect' ? null : response.status;
+      throw new LanguageToolError('HTTP_ERROR', describeHttpFailure(status ?? 0, response.type), {
+        endpoint,
+        ...(status !== null && { httpStatus: status }),
+      });
     }
     return response;
   }
@@ -166,6 +172,27 @@ export class LanguageToolClient {
       { endpoint, cause: error },
     );
   }
+}
+
+function describeHttpFailure(status: number, type: ResponseType): string {
+  if (type === 'opaqueredirect' || (status >= 300 && status < 400)) {
+    return `LanguageTool answered HTTP ${status || '3xx'} (redirect not followed)`;
+  }
+  let category: string;
+  if (status === 400) {
+    category = 'request rejected, e.g. unknown language code or rule id';
+  } else if (status === 413) {
+    category = 'request too large';
+  } else if (status === 429) {
+    category = 'too many requests';
+  } else if (status >= 400 && status < 500) {
+    category = 'client error';
+  } else if (status >= 500 && status < 600) {
+    category = 'server error';
+  } else {
+    category = 'unexpected status';
+  }
+  return `LanguageTool answered HTTP ${status} (${category})`;
 }
 
 function isTimeoutError(error: unknown): boolean {

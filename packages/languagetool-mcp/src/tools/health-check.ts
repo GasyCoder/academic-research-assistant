@@ -4,7 +4,7 @@ import { LanguageToolError } from '../errors.js';
 import type { LanguageToolClient } from '../languagetool-client.js';
 import { toSoftwareInfo } from '../transform.js';
 import { type HealthCheckResult, type SoftwareInfo, healthCheckResultSchema } from '../types.js';
-import { toolSuccess } from './results.js';
+import { toolFailure, toolSuccess } from './results.js';
 
 /**
  * Probes /v2/healthcheck, then reads the version from /v2/info on a best-effort basis.
@@ -51,6 +51,12 @@ export function registerHealthCheckTool(server: McpServer, client: LanguageToolC
       outputSchema: healthCheckResultSchema,
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
     },
-    async () => toolSuccess(await runHealthCheck(client)),
+    async () => {
+      try {
+        return toolSuccess(await runHealthCheck(client));
+      } catch (error) {
+        return toolFailure(error);
+      }
+    },
   );
 }

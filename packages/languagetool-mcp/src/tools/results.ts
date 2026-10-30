@@ -7,9 +7,10 @@ export function toToolError(error: unknown): ToolError {
   if (error instanceof LanguageToolError) {
     return error.toDetails();
   }
+  // Unknown errors may carry external or user content in their message: it is never forwarded.
   return {
     code: 'INTERNAL_ERROR',
-    message: error instanceof Error ? error.message : 'Unexpected error',
+    message: 'Unexpected internal error',
     endpoint: null,
     httpStatus: null,
   };
