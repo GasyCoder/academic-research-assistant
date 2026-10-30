@@ -40,7 +40,8 @@ const BREAKABLE_SPACE = /[\t\n\v\f\r \u1680\u2000-\u2006\u2008-\u200a\u2028\u202
 
 interface Segmenters {
   sentence: Intl.Segmenter;
-  grapheme: Intl.Segmenter;
+  graphemePositions: number[];
+  graphemeBoundaries: Set<number>;
 }
 
 /**
@@ -60,7 +61,7 @@ export function segmentDocument(text: string, options: SegmentationOptions, loca
   if (maxCoreLength < 2) {
     throw new RangeError('maxRequestLength must exceed twice contextLength by at least 2');
   }
-  const segmenters = createSegmenters(locale);
+  const segmenters = createSegmenters(text, locale);
 
   const cores: Array<{ start: number; end: number; natural: boolean }> = [];
   let start = 0;
@@ -86,7 +87,7 @@ export function segmentDocument(text: string, options: SegmentationOptions, loca
   });
 }
 
-function createSegmenters(locale: string | undefined): Segmenters {
+function createSegmenters(text: string, locale: string | undefined): Segmenters {
   let sentence: Intl.Segmenter;
   try {
     sentence = new Intl.Segmenter(locale === 'auto' ? undefined : locale, { granularity: 'sentence' });
@@ -94,7 +95,12 @@ function createSegmenters(locale: string | undefined): Segmenters {
     // LanguageTool accepts codes that are not valid BCP 47 tags for Intl.
     sentence = new Intl.Segmenter(undefined, { granularity: 'sentence' });
   }
-  return { sentence, grapheme: new Intl.Segmenter(undefined, { granularity: 'grapheme' }) };
+  const grapheme = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+  // A fixed slice margin cannot preserve regional-indicator parity or arbitrarily
+  // long combining/ZWJ sequences. Compute boundaries against the original text.
+  const graphemePositions = Array.from(grapheme.segment(text), ({ index }) => index);
+  graphemePositions.push(text.length);
+  return { sentence, graphemePositions, graphemeBoundaries: new Set(graphemePositions) };
 }
 
 /** Best cut in [from + half, limit]; always after `from`. */
@@ -109,15 +115,15 @@ function findCut(text: string, from: number, limit: number, segmenters: Segmente
   if (newline + 1 >= min) {
     return { position: newline + 1, natural: false };
   }
-  const sentence = boundaries(text, segmenters.sentence, min, limit).at(-1);
+  const sentence = boundaries(text, segmenters, 'sentence', min, limit).at(-1);
   if (sentence !== undefined) {
     return { position: sentence, natural: false };
   }
-  const space = lastSpaceEnd(text, min, limit);
+  const space = lastSpaceEnd(text, min, limit, segmenters);
   if (space !== undefined) {
     return { position: space, natural: false };
   }
-  const grapheme = boundaries(text, segmenters.grapheme, min, limit).at(-1);
+  const grapheme = boundaries(text, segmenters, 'grapheme', min, limit).at(-1);
   // A single grapheme longer than half a core: cut at a code point boundary.
   return { position: grapheme ?? withoutSurrogateSplit(text, limit), natural: false };
 }
@@ -132,15 +138,15 @@ function leftContextStart(text: string, cut: number, contextLength: number, segm
   if (paragraph !== undefined) {
     return paragraph;
   }
-  const sentence = boundaries(text, segmenters.sentence, lo, cut - 1)[0];
+  const sentence = boundaries(text, segmenters, 'sentence', lo, cut - 1)[0];
   if (sentence !== undefined) {
     return sentence;
   }
-  const space = firstSpaceEnd(text, lo, cut - 1);
+  const space = firstSpaceEnd(text, lo, cut - 1, segmenters);
   if (space !== undefined) {
     return space;
   }
-  return boundaries(text, segmenters.grapheme, lo, cut - 1)[0] ?? cut;
+  return boundaries(text, segmenters, 'grapheme', lo, cut - 1)[0] ?? cut;
 }
 
 /** End of the context after an artificial cut: whole sentences of the same paragraph when possible. */
@@ -153,15 +159,15 @@ function rightContextEnd(text: string, cut: number, contextLength: number, segme
   if (paragraph !== undefined) {
     return paragraph;
   }
-  const sentence = boundaries(text, segmenters.sentence, cut + 1, hi).at(-1);
+  const sentence = boundaries(text, segmenters, 'sentence', cut + 1, hi).at(-1);
   if (sentence !== undefined) {
     return sentence;
   }
-  const space = lastSpaceEnd(text, cut + 1, hi);
+  const space = lastSpaceEnd(text, cut + 1, hi, segmenters);
   if (space !== undefined) {
     return space;
   }
-  return boundaries(text, segmenters.grapheme, cut + 1, hi).at(-1) ?? cut;
+  return boundaries(text, segmenters, 'grapheme', cut + 1, hi).at(-1) ?? cut;
 }
 
 /** Ends of the paragraph breaks lying within [from, to]. */
@@ -170,17 +176,33 @@ function paragraphBreakEnds(text: string, from: number, to: number): number[] {
 }
 
 /** Segment boundaries of the given segmenter within [lo, hi], in ascending order. */
-function boundaries(text: string, segmenter: Intl.Segmenter, lo: number, hi: number): number[] {
+function boundaries(text: string, segmenters: Segmenters, kind: 'sentence' | 'grapheme', lo: number, hi: number): number[] {
   if (lo > hi) {
     return [];
+  }
+  if (kind === 'grapheme') {
+    // Binary search avoids rescanning the document for each short context window.
+    const positions = segmenters.graphemePositions;
+    let left = 0;
+    let right = positions.length;
+    while (left < right) {
+      const middle = (left + right) >>> 1;
+      if (positions[middle]! < lo) left = middle + 1;
+      else right = middle;
+    }
+    const result: number[] = [];
+    for (let index = left; index < positions.length && positions[index]! <= hi; index++) {
+      result.push(positions[index]!);
+    }
+    return result;
   }
   const sliceStart = Math.max(0, lo - SEGMENTER_MARGIN);
   const slice = text.slice(sliceStart, Math.min(text.length, hi + SEGMENTER_MARGIN));
   const result: number[] = [];
-  for (const { index } of segmenter.segment(slice)) {
+  for (const { index } of segmenters.sentence.segment(slice)) {
     const position = sliceStart + index;
     // The start of the slice is only a real boundary at the start of the text.
-    if ((index > 0 || sliceStart === 0) && position >= lo && position <= hi) {
+    if ((index > 0 || sliceStart === 0) && position >= lo && position <= hi && segmenters.graphemeBoundaries.has(position)) {
       result.push(position);
     }
   }
@@ -188,9 +210,9 @@ function boundaries(text: string, segmenter: Intl.Segmenter, lo: number, hi: num
 }
 
 /** Latest position in [min, limit] right after a breakable space. */
-function lastSpaceEnd(text: string, min: number, limit: number): number | undefined {
+function lastSpaceEnd(text: string, min: number, limit: number, segmenters: Segmenters): number | undefined {
   for (let index = limit - 1; index >= min - 1; index--) {
-    if (isSpaceCut(text, index)) {
+    if (isSpaceCut(text, index) && segmenters.graphemeBoundaries.has(index + 1)) {
       return index + 1;
     }
   }
@@ -198,9 +220,9 @@ function lastSpaceEnd(text: string, min: number, limit: number): number | undefi
 }
 
 /** Earliest position in [lo, hi] right after a breakable space. */
-function firstSpaceEnd(text: string, lo: number, hi: number): number | undefined {
+function firstSpaceEnd(text: string, lo: number, hi: number, segmenters: Segmenters): number | undefined {
   for (let index = lo - 1; index < hi; index++) {
-    if (isSpaceCut(text, index)) {
+    if (isSpaceCut(text, index) && segmenters.graphemeBoundaries.has(index + 1)) {
       return index + 1;
     }
   }

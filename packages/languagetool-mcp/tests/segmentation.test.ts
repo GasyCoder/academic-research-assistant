@@ -148,6 +148,45 @@ describe('segmentDocument', () => {
     expect(cuts(segments)).not.toContain(120);
   });
 
+  it.each(['🇫🇷🇲🇬🇩🇪', '👩‍👩‍👧‍👦', '👍🏽', '✈️', 'e\u0301', 'a \u0301'])(
+    'keeps all request and core edges on global grapheme boundaries: %s',
+    (unit) => {
+      const text = unit.repeat(Math.ceil(100_000 / unit.length)).slice(0, 100_000);
+      const boundaries = new Set(Array.from(new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(text), ({ index }) => index));
+      boundaries.add(text.length);
+      for (const options of [
+        { maxRequestLength: 50_000, contextLength: 1_000 },
+        { maxRequestLength: 2_003, contextLength: 101 },
+      ]) {
+        const segments = segmentDocument(text, options);
+        expectInvariants(text, segments, options);
+        expect(cuts(segments).filter((position) => !boundaries.has(position))).toEqual([]);
+        expect(segments.map((segment) => text.slice(segment.coreStart, segment.coreEnd)).join('')).toBe(text);
+      }
+    },
+  );
+
+  it('makes progress when one grapheme exceeds the entire request budget', () => {
+    const text = `a${'\u0301'.repeat(60_000)}${'x'.repeat(39_999)}`;
+    const options = { maxRequestLength: 50_000, contextLength: 1_000 };
+    const segments = segmentDocument(text, options);
+    expectInvariants(text, segments, options);
+    expect(segments.every((segment) => segment.coreEnd > segment.coreStart)).toBe(true);
+    expect(segments.map((segment) => text.slice(segment.coreStart, segment.coreEnd)).join('')).toBe(text);
+  });
+
+  it.each([49_999, 50_000, 50_001, 95_999, 96_000, 96_001, 99_999, 100_000])(
+    'bounds every request for a whitespace-free document of %i UTF-16 units',
+    (length) => {
+      const text = 'x'.repeat(length);
+      const options = { maxRequestLength: 50_000, contextLength: 1_000 };
+      const segments = segmentDocument(text, options);
+      expectInvariants(text, segments, options);
+      expect(segments.every((segment) => segment.end > segment.start)).toBe(true);
+      expect(segments.map((segment) => text.slice(segment.coreStart, segment.coreEnd)).join('')).toBe(text);
+    },
+  );
+
   it('accepts "auto" and language codes that Intl does not support', () => {
     const text = 'One sentence. Another sentence. '.repeat(20);
     const options = { maxRequestLength: 100, contextLength: 20 };

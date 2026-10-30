@@ -8,7 +8,9 @@ what to change belongs to the calling model or Skill.
 
 ## Requirements
 
-- Node.js ≥ 20
+- Node.js ≥ 20 with a working `Intl.Segmenter` and ICU segmentation data (official
+  full-ICU builds recommended). Builds without ICU are not supported; custom small-ICU
+  or system-ICU builds must provide the required segmentation data.
 - A running LanguageTool HTTP server (installed separately, e.g. on `http://127.0.0.1:8081`).
   Tested with LanguageTool 6.9-SNAPSHOT.
 
@@ -158,12 +160,17 @@ the parts to LanguageTool one at a time; the caller never handles the parts.
 ### Segmentation
 
 - Each request carries at most 50,000 units: a core of at most 48,000 units, plus up to
-  1,000 units of context on each side of an artificial cut.
+  1,000 units of context on each side of an artificial cut. A document fitting in one
+  request is sent whole, with no context, and its core can reach 50,000 units.
 - Cuts are chosen, best first: blank-line paragraph break, line break, sentence boundary
   (`Intl.Segmenter` with the requested language; default rules for `auto` or a code it does
   not know), breakable whitespace (no-break spaces are kept), grapheme boundary. The latest
   cut of the best kind in the second half of the core budget is used.
-- A cut never splits a surrogate pair, a grapheme cluster such as an emoji sequence, or a CRLF.
+- A cut never splits a surrogate pair or a CRLF. Grapheme boundaries are computed on the
+  original document, preserving regional-indicator pairing, ZWJ sequences and combining
+  marks even after whitespace. If no grapheme boundary fits in the allowed core window
+  (for example an exceptionally long cluster of combining marks), the core falls back to
+  a code-point boundary to guarantee progress within the request limit.
 - Context is added only at artificial cuts, i.e. anything but a paragraph break: whole
   sentences of the same paragraph, so that LanguageTool sees complete sentences and paired
   brackets around the cut. A paragraph break gets none.
