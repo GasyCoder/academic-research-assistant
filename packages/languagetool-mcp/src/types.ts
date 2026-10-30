@@ -6,8 +6,10 @@ import { z } from 'zod';
  * `null` rather than missing keys to keep the structure predictable for clients.
  */
 
+const TOOL_ERROR_CODES = ['TIMEOUT', 'UNREACHABLE', 'HTTP_ERROR', 'INVALID_RESPONSE', 'TEXT_TOO_LONG', 'INTERNAL_ERROR'] as const;
+
 export const toolErrorSchema = z.object({
-  code: z.enum(['TIMEOUT', 'UNREACHABLE', 'HTTP_ERROR', 'INVALID_RESPONSE', 'TEXT_TOO_LONG', 'INTERNAL_ERROR']),
+  code: z.enum(TOOL_ERROR_CODES),
   message: z.string(),
   endpoint: z.string().nullable(),
   httpStatus: z.number().int().nullable(),
@@ -81,6 +83,45 @@ export const checkTextResultSchema = z.object({
   issues: z.array(languageIssueSchema),
 });
 
+export const documentIssueSchema = languageIssueSchema.extend({
+  offset: z.number().int().describe('Start of the issue in the submitted document (UTF-16 code units)'),
+  replacements: z.array(z.string()).describe('First suggestions in LanguageTool order; may be empty'),
+  replacementsTruncated: z.boolean().describe('Whether LanguageTool suggested more replacements than returned'),
+});
+
+export const failedRangeSchema = z.object({
+  chunkIndex: z.number().int(),
+  start: z.number().int().describe('Start of a document range without diagnostics (UTF-16 code units)'),
+  end: z.number().int().describe('End of the range, exclusive'),
+  code: z
+    .enum([...TOOL_ERROR_CODES, 'SKIPPED'])
+    .describe('Error of the request for this range, or SKIPPED: not sent because processing stopped earlier'),
+});
+
+export const checkDocumentResultSchema = z.object({
+  requestedLanguage: z.string(),
+  languages: z
+    .array(z.object({ name: z.string(), code: z.string() }))
+    .describe('Languages LanguageTool checked against, in document order; several only with "auto" on a mixed document'),
+  software: softwareInfoSchema,
+  documentLength: z.number().int().describe('Length of the document in UTF-16 code units'),
+  complete: z
+    .boolean()
+    .describe('Every planned chunk succeeded, no owned diagnostic was omitted by the output budget, and no upstream incomplete-results warning was received; not equivalence to a monolithic check'),
+  truncated: z
+    .boolean()
+    .describe('The output budget was reached: the first omitted issue starts at truncatedAt and later ranges were not checked; earlier issues at the same offset may be present'),
+  truncatedAt: z.number().int().nullable().describe('Offset of the first issue left out, when truncated'),
+  incompleteResults: z.boolean().describe('LanguageTool reported incomplete results for at least one range'),
+  chunkCount: z.number().int(),
+  processedChunkCount: z.number().int(),
+  failedChunkCount: z.number().int(),
+  skippedChunkCount: z.number().int(),
+  failedRanges: z.array(failedRangeSchema).describe('Document ranges that were not checked, in document order'),
+  issueCount: z.number().int(),
+  issues: z.array(documentIssueSchema).describe('Issues in document order'),
+});
+
 export type ToolError = z.infer<typeof toolErrorSchema>;
 export type SoftwareInfo = z.infer<typeof softwareInfoSchema>;
 export type HealthCheckResult = z.infer<typeof healthCheckResultSchema>;
@@ -88,3 +129,6 @@ export type SupportedLanguage = z.infer<typeof supportedLanguageSchema>;
 export type SupportedLanguagesResult = z.infer<typeof supportedLanguagesResultSchema>;
 export type LanguageIssue = z.infer<typeof languageIssueSchema>;
 export type CheckTextResult = z.infer<typeof checkTextResultSchema>;
+export type DocumentIssue = z.infer<typeof documentIssueSchema>;
+export type FailedRange = z.infer<typeof failedRangeSchema>;
+export type CheckDocumentResult = z.infer<typeof checkDocumentResultSchema>;

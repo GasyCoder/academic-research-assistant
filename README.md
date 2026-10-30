@@ -25,8 +25,10 @@ Planned initial components:
 ## LanguageTool MCP server
 
 `packages/languagetool-mcp` is a stdio MCP server for a locally installed LanguageTool
-instance. It exposes three tools: `health_check`, `get_supported_languages` and
-`check_text`. It returns structured diagnostics and never rewrites text.
+instance. It exposes four tools: `health_check`, `get_supported_languages`, `check_text`
+(texts up to 50,000 characters) and `check_document` (longer documents up to 100,000
+characters, checked part by part with bounded results). It returns structured diagnostics
+and never rewrites text.
 
 ```bash
 npm install

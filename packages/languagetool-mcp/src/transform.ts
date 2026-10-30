@@ -1,5 +1,5 @@
 import type { RawCheckResponse, RawLanguage, RawMatch, RawSoftware } from './languagetool-schemas.js';
-import type { CheckTextResult, LanguageIssue, SoftwareInfo, SupportedLanguagesResult } from './types.js';
+import type { CheckTextResult, DocumentIssue, LanguageIssue, SoftwareInfo, SupportedLanguagesResult } from './types.js';
 
 /*
  * Pure mappings from raw LanguageTool payloads to the normalized tool results.
@@ -53,6 +53,17 @@ export function toLanguageIssue(match: RawMatch): LanguageIssue {
     issueType: match.rule.issueType ?? null,
     categoryId: match.rule.category?.id ?? null,
     categoryName: match.rule.category?.name ?? null,
+  };
+}
+
+/** An issue found in a range sent at `rangeStart`, in document coordinates, with at most `maxReplacements` suggestions. */
+export function toDocumentIssue(match: RawMatch, rangeStart: number, maxReplacements: number): DocumentIssue {
+  const issue = toLanguageIssue(match);
+  return {
+    ...issue,
+    offset: rangeStart + issue.offset,
+    replacements: issue.replacements.slice(0, maxReplacements),
+    replacementsTruncated: issue.replacements.length > maxReplacements,
   };
 }
 
