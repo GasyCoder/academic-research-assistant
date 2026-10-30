@@ -1,3 +1,5 @@
+import { createRequire } from 'node:module';
+
 import { McpServer } from '@modelcontextprotocol/server';
 
 import { DEFAULT_MAX_TEXT_LENGTH, type LanguageToolClient } from './languagetool-client.js';
@@ -7,8 +9,11 @@ import { registerGetSupportedLanguagesTool } from './tools/get-supported-languag
 import { registerHealthCheckTool } from './tools/health-check.js';
 
 export const SERVER_NAME = 'languagetool-mcp';
-/** Kept in sync with package.json (checked by tests). */
-export const SERVER_VERSION = '0.1.0';
+/**
+ * The package version. package.json sits one level above both src/ and dist/, npm always ships it,
+ * and the path is resolved from this module, not from the working directory.
+ */
+export const SERVER_VERSION: string = (createRequire(import.meta.url)('../package.json') as { version: string }).version;
 
 const INSTRUCTIONS =
   'Generic adapter for a LanguageTool server. Tools return linguistic diagnostics only; ' +
