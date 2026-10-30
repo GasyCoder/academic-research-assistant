@@ -6,6 +6,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { DEFAULT_MAX_TEXT_LENGTH, type FetchLike, type LanguageToolClient } from '../src/languagetool-client.js';
 import { SERVER_NAME, SERVER_VERSION, createServer } from '../src/server.js';
+import { MAX_DOCUMENT_LENGTH } from '../src/tools/check-document.js';
+import { fakeLanguageToolFetch, tehOffsets } from './fake-languagetool.js';
 import { emptyCheckResponse, englishCheckResponse, englishText } from './fixtures/languagetool-responses.js';
 import { connectionRefused, createClient, jsonResponse, routeFetch } from './helpers.js';
 
@@ -16,7 +18,12 @@ async function connect(fetchImpl: FetchLike, client: LanguageToolClient = create
   const server = createServer(client);
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   const pending = new Map<number, (message: JsonRpcResult) => void>();
+  const notifications: Array<{ method: string; params?: Record<string, unknown> }> = [];
   clientTransport.onmessage = (message) => {
+    if (!('id' in message)) {
+      notifications.push(message as (typeof notifications)[number]);
+      return;
+    }
     const response = message as unknown as JsonRpcResult;
     pending.get(response.id)?.(response);
   };
@@ -39,7 +46,7 @@ async function connect(fetchImpl: FetchLike, client: LanguageToolClient = create
   });
   await clientTransport.send({ jsonrpc: '2.0', method: 'notifications/initialized' } as JSONRPCMessage);
 
-  return { init, request, close: () => server.close() };
+  return { init, request, notifications, close: () => server.close() };
 }
 
 let close: (() => Promise<void>) | undefined;
@@ -58,18 +65,26 @@ describe('MCP server', () => {
     expect(session.init.result?.serverInfo).toEqual({ name: SERVER_NAME, version: SERVER_VERSION });
   });
 
-  it('exposes exactly the three LanguageTool tools', async () => {
+  it('exposes exactly the four LanguageTool tools', async () => {
     const session = await connect(routeFetch({}));
     close = session.close;
     const response = await session.request('tools/list');
     const tools = response.result?.tools as Array<{ name: string; outputSchema?: unknown; inputSchema: unknown }>;
 
-    expect(tools.map((tool) => tool.name).sort()).toEqual(['check_text', 'get_supported_languages', 'health_check']);
+    expect(tools.map((tool) => tool.name).sort()).toEqual([
+      'check_document',
+      'check_text',
+      'get_supported_languages',
+      'health_check',
+    ]);
     for (const tool of tools) {
       expect(tool.outputSchema).toBeDefined();
     }
-    const checkText = tools.find((tool) => tool.name === 'check_text')!;
-    expect(checkText.inputSchema).toMatchObject({ required: expect.arrayContaining(['text', 'language']) });
+    for (const name of ['check_text', 'check_document']) {
+      expect(tools.find((tool) => tool.name === name)!.inputSchema).toMatchObject({
+        required: expect.arrayContaining(['text', 'language']),
+      });
+    }
   });
 
   it('returns structured issues from check_text', async () => {
@@ -170,6 +185,70 @@ describe('check_text input length limit over MCP', () => {
       httpStatus: null,
     });
     expect(JSON.stringify(response)).not.toContain(MARKER);
+  });
+});
+
+describe('check_document over MCP', () => {
+  /** Paragraphs long enough for several 50,000-unit requests, with a "teh" in some of them. */
+  const longDocument = () =>
+    Array.from({ length: 1_400 }, (_, index) =>
+      index % 300 === 7 ? `Paragraph ${index}: 😀 teh issue.` : `Paragraph ${index} describes the method in detail.`,
+    ).join('\n\n');
+
+  it('advertises the document limit as maxLength', async () => {
+    const session = await connect(routeFetch({}));
+    close = session.close;
+    const response = await session.request('tools/list');
+    const tools = response.result?.tools as Array<{ name: string; inputSchema: { properties: Record<string, unknown> } }>;
+
+    expect(tools.find((tool) => tool.name === 'check_document')!.inputSchema.properties.text).toMatchObject({
+      type: 'string',
+      maxLength: MAX_DOCUMENT_LENGTH,
+    });
+  });
+
+  it('returns issues at document offsets and reports progress per chunk', async () => {
+    const text = longDocument();
+    const fake = fakeLanguageToolFetch();
+    const session = await connect(fake.fetch);
+    close = session.close;
+    const response = await session.request('tools/call', {
+      name: 'check_document',
+      arguments: { text, language: 'en-US' },
+      _meta: { progressToken: 'doc-1' },
+    });
+
+    expect(response.result?.isError).toBeFalsy();
+    const result = response.result?.structuredContent as { chunkCount: number; complete: boolean; issues: Array<{ offset: number }> };
+    expect(result.chunkCount).toBeGreaterThan(1);
+    expect(result.complete).toBe(true);
+    expect(result.issues.map((issue) => issue.offset)).toEqual(tehOffsets(text));
+    const progress = session.notifications.filter((notification) => notification.method === 'notifications/progress');
+    expect(progress.map((notification) => notification.params)).toEqual(
+      Array.from({ length: result.chunkCount }, (_, index) => ({
+        progressToken: 'doc-1',
+        progress: index + 1,
+        total: result.chunkCount,
+      })),
+    );
+  });
+
+  it('rejects a document above the limit with TEXT_TOO_LONG, then keeps serving', async () => {
+    const fake = fakeLanguageToolFetch();
+    const session = await connect(fake.fetch);
+    close = session.close;
+    const tooLong = await session.request('tools/call', {
+      name: 'check_document',
+      arguments: { text: 'word '.repeat(MAX_DOCUMENT_LENGTH / 5 + 1), language: 'en-US' },
+    });
+
+    expect(tooLong.result?.isError).toBe(true);
+    const [content] = tooLong.result?.content as Array<{ text: string }>;
+    expect(JSON.parse(content!.text).error).toMatchObject({ code: 'TEXT_TOO_LONG', httpStatus: null });
+    expect(fake.state.requests).toHaveLength(0);
+
+    const next = await session.request('tools/call', { name: 'check_document', arguments: { text: 'A teh.', language: 'en-US' } });
+    expect(next.result?.structuredContent).toMatchObject({ issueCount: 1, complete: true });
   });
 });
 

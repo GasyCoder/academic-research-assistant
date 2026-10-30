@@ -172,10 +172,10 @@ describe('production stdio server (dist/index.js)', () => {
     session.send({ jsonrpc: '2.0', method: 'notifications/initialized' } as JSONRPCMessage);
   });
 
-  it('exposes exactly the three tools', async () => {
+  it('exposes exactly the four tools', async () => {
     const response = await session.request('tools/list');
     const names = (response.result?.tools as Array<{ name: string }>).map((tool) => tool.name).sort();
-    expect(names).toEqual(['check_text', 'get_supported_languages', 'health_check']);
+    expect(names).toEqual(['check_document', 'check_text', 'get_supported_languages', 'health_check']);
   });
 
   it('reports a healthy LanguageTool', async () => {
