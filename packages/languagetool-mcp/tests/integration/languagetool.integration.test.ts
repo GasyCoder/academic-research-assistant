@@ -12,9 +12,12 @@ import { runGetSupportedLanguages } from '../../src/tools/get-supported-language
 import { runHealthCheck } from '../../src/tools/health-check.js';
 
 const enabled = process.env.LANGUAGETOOL_INTEGRATION === '1';
+const config = loadConfig();
 
-describe.skipIf(!enabled)('LanguageTool integration', () => {
-  const client = new LanguageToolClient(loadConfig());
+// The first check in a language took 4.6–10 s on a cold server, beyond Vitest's 5 s default:
+// let each test run as long as the client itself waits.
+describe.skipIf(!enabled)('LanguageTool integration', { timeout: config.timeoutMs + 5_000 }, () => {
+  const client = new LanguageToolClient(config);
 
   it('reports a healthy server with its version', async () => {
     const result = await runHealthCheck(client);
@@ -54,19 +57,15 @@ describe.skipIf(!enabled)('LanguageTool integration', () => {
     expect(flagged.some((fragment) => fragment.startsWith('This'))).toBe(true);
   });
 
-  it(
-    'checks a text of exactly the input limit within the configured timeout',
-    async () => {
-      const sentence = 'The measurments was performed twice, and the results are consistent. ';
-      const text = sentence.repeat(Math.ceil(DEFAULT_MAX_TEXT_LENGTH / sentence.length)).slice(0, DEFAULT_MAX_TEXT_LENGTH);
-      const result = await runCheckText(client, { text, language: 'en-US' });
-      expect(result.issueCount).toBeGreaterThan(0);
-      for (const issue of result.issues) {
-        expect(issue.offset + issue.length).toBeLessThanOrEqual(text.length);
-      }
-    },
-    client.timeoutMs + 5_000,
-  );
+  it('checks a text of exactly the input limit within the configured timeout', async () => {
+    const sentence = 'The measurments was performed twice, and the results are consistent. ';
+    const text = sentence.repeat(Math.ceil(DEFAULT_MAX_TEXT_LENGTH / sentence.length)).slice(0, DEFAULT_MAX_TEXT_LENGTH);
+    const result = await runCheckText(client, { text, language: 'en-US' });
+    expect(result.issueCount).toBeGreaterThan(0);
+    for (const issue of result.issues) {
+      expect(issue.offset + issue.length).toBeLessThanOrEqual(text.length);
+    }
+  });
 
   it('reports an unknown language as an HTTP error', async () => {
     await expect(runCheckText(client, { text: 'Hello', language: 'xx-YY' })).rejects.toMatchObject({
