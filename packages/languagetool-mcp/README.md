@@ -198,8 +198,12 @@ the parts to LanguageTool one at a time; the caller never handles the parts.
 ### Failures
 
 - The parts are sent sequentially, each at most once; nothing is retried.
-- `INVALID_RESPONSE` concerns one part's answer (e.g. a response over 8 MiB for an
-  error-dense part): the part is listed in `failedRanges` and the next parts are checked.
+- An isolated `INVALID_RESPONSE` concerns one part's answer (e.g. a response over 8 MiB
+  for an error-dense part): the part is listed in `failedRanges` and processing continues.
+  Two consecutive `INVALID_RESPONSE` errors stop processing and later parts are `SKIPPED`,
+  avoiding transmission of the remaining manuscript to a probably incompatible server.
+  A successful part resets this counter. This also stops after two consecutive oversized
+  responses; it does not inspect upstream messages or retry either part.
 - `TIMEOUT`, `UNREACHABLE` and `HTTP_ERROR` would repeat or add load: the remaining parts
   are `SKIPPED`.
 - If no part could be checked, the tool returns the first error as an MCP error result

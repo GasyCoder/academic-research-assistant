@@ -89,8 +89,9 @@ export type CheckDocumentInput = z.infer<typeof checkDocumentInputSchema>;
 
 /**
  * Checks a document chunk by chunk, sequentially, and returns its issues in document coordinates.
- * Each chunk is sent at most once. A chunk whose answer is invalid is reported in failedRanges and
- * the next chunks are still checked; any other failure (timeout, unreachable server, HTTP error)
+ * Each chunk is sent at most once. An isolated invalid answer is reported in failedRanges and
+ * processing continues; two consecutive invalid answers stop it, since the server may be incompatible.
+ * Any other failure (timeout, unreachable server, HTTP error)
  * would repeat or add load, so the remaining chunks are skipped. If no chunk could be checked, the
  * first error is thrown. Issues are accumulated in document order until the output budget is
  * reached; processing then stops and the result says where.
@@ -130,6 +131,7 @@ export async function runCheckDocument(
   let processed = 0;
   let failed = 0;
   let stopped = false;
+  let consecutiveInvalidResponses = 0;
 
   for (const segment of segments) {
     if (stopped) {
@@ -150,11 +152,13 @@ export async function runCheckDocument(
       firstError ??= error;
       failed++;
       failedRanges.push(rangeOf(segment, error.code));
-      stopped = error.code !== 'INVALID_RESPONSE';
+      consecutiveInvalidResponses++;
+      stopped = error.code !== 'INVALID_RESPONSE' || consecutiveInvalidResponses >= 2;
       await context.onProgress?.(segment.index + 1, segments.length);
       continue;
     }
 
+    consecutiveInvalidResponses = 0;
     processed++;
     software ??= toSoftwareInfo(raw.software);
     languages.set(raw.language.code, { name: raw.language.name, code: raw.language.code });

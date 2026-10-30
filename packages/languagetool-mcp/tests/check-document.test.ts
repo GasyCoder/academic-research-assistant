@@ -183,6 +183,41 @@ describe('check_document requests', () => {
 });
 
 describe('check_document partial failures', () => {
+  it.each(['invalid JSON', '{}'])('stops after consecutive incompatible responses: %s', async (body) => {
+    let calls = 0;
+    const fetch: FetchLike = async () => {
+      calls++;
+      return new Response(body);
+    };
+    const error = await captureError(runCheckDocument(smallClient(fetch), input(documentOf(30)), {}, SMALL));
+    expect(error.code).toBe('INVALID_RESPONSE');
+    expect(calls).toBe(2);
+    expect(JSON.stringify(error.toDetails())).not.toContain(MARKER);
+  });
+
+  it('keeps previous results and skips later chunks after consecutive invalid responses', async () => {
+    const fake = fakeLanguageToolFetch();
+    let calls = 0;
+    const fetch: FetchLike = async (url, init) => ++calls === 1 ? fake.fetch(url, init) : new Response('invalid JSON');
+    const result = await runCheckDocument(smallClient(fetch), input(documentOf(30, { 0: 'teh start.' })), {}, SMALL);
+    expect(calls).toBe(3);
+    expect(result).toMatchObject({ complete: false, processedChunkCount: 1, failedChunkCount: 2 });
+    expect(result.failedRanges.slice(0, 2).map((range) => range.code)).toEqual(['INVALID_RESPONSE', 'INVALID_RESPONSE']);
+    expect(result.failedRanges.slice(2).every((range) => range.code === 'SKIPPED')).toBe(true);
+    expect(result.issueCount).toBe(1);
+    for (const range of result.failedRanges) expect(Object.keys(range).sort()).toEqual(['chunkIndex', 'code', 'end', 'start']);
+  });
+
+  it('resets the invalid-response streak after a successful chunk', async () => {
+    const fake = fakeLanguageToolFetch();
+    let calls = 0;
+    const fetch: FetchLike = async (url, init) => ++calls % 2 === 1 ? new Response('invalid JSON') : fake.fetch(url, init);
+    const result = await runCheckDocument(smallClient(fetch), input(documentOf(30)), {}, SMALL);
+    expect(calls).toBe(result.chunkCount);
+    expect(result.skippedChunkCount).toBe(0);
+    expect(result.failedChunkCount).toBe(Math.ceil(result.chunkCount / 2));
+  });
+
   it('continues after an invalid answer and reports the failed range', async () => {
     const fake = fakeLanguageToolFetch();
     const text = documentOf(30, { 2: 'teh start.', 15: `BADJSON ${MARKER} teh`, 28: 'teh end.' });
