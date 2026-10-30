@@ -13,9 +13,17 @@ import {
 
 export type FetchLike = (input: string, init: RequestInit) => Promise<Response>;
 
+/**
+ * Largest LanguageTool response body accepted, in bytes. Large enough for the
+ * diagnostics of a long chapter; bigger answers are rejected while streaming.
+ */
+export const DEFAULT_MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
+
 export interface LanguageToolClientOptions extends LanguageToolConfig {
   /** HTTP implementation; defaults to the global fetch. Injected in tests. */
   fetch?: FetchLike;
+  /** Defaults to DEFAULT_MAX_RESPONSE_BYTES. */
+  maxResponseBytes?: number;
 }
 
 export interface CheckRequest {
@@ -37,10 +45,12 @@ export class LanguageToolClient {
   readonly baseUrl: string;
   readonly timeoutMs: number;
   private readonly fetchImpl: FetchLike;
+  private readonly maxResponseBytes: number;
 
   constructor(options: LanguageToolClientOptions) {
     this.baseUrl = options.baseUrl;
     this.timeoutMs = options.timeoutMs;
+    this.maxResponseBytes = options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES;
     this.fetchImpl = options.fetch ?? ((input, init) => fetch(input, init));
   }
 
@@ -142,10 +152,44 @@ export class LanguageToolClient {
     return response;
   }
 
+  /** Reads the body as UTF-8, aborting as soon as it exceeds maxResponseBytes. */
   private async readBody(response: Response, endpoint: string, signal: AbortSignal): Promise<string> {
+    const tooLarge = () =>
+      new LanguageToolError('INVALID_RESPONSE', `LanguageTool response exceeds the ${this.maxResponseBytes}-byte limit`, {
+        endpoint,
+        httpStatus: response.status,
+      });
+
+    const declaredLength = Number(response.headers.get('Content-Length') ?? 0);
+    if (declaredLength > this.maxResponseBytes) {
+      await response.body?.cancel().catch(() => undefined);
+      throw tooLarge();
+    }
+    if (response.body === null) {
+      return '';
+    }
+
+    const reader = response.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let received = 0;
     try {
-      return await response.text();
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) {
+          break;
+        }
+        received += value.byteLength;
+        if (received > this.maxResponseBytes) {
+          await reader.cancel().catch(() => undefined);
+          throw tooLarge();
+        }
+        chunks.push(value);
+      }
+      return new TextDecoder().decode(Buffer.concat(chunks));
     } catch (error) {
+      if (error instanceof LanguageToolError) {
+        throw error;
+      }
       if (signal.aborted) {
         throw this.toTransportError(error, endpoint);
       }
