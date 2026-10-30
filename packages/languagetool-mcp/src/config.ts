@@ -4,7 +4,8 @@ export const DEFAULT_BASE_URL = 'http://127.0.0.1:8081';
 /**
  * LanguageTool loads a language on its first check, which took 4–10 s on a 12-core machine
  * (healthcheck stays instant meanwhile). 30 s leaves room for that and for a long text, while
- * staying below the 60 s request timeout of the MCP SDK clients, so TIMEOUT reaches the caller first.
+ * staying below the installed TypeScript MCP SDK's 60 s default. Caller timeouts are configurable
+ * and must leave room for HTTP requests plus processing; health_check makes two sequential requests.
  */
 export const DEFAULT_TIMEOUT_MS = 30_000;
 export const MAX_TIMEOUT_MS = 300_000;

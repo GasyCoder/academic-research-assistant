@@ -37,11 +37,13 @@ diagnostics are written to stderr and never include the analysed text.
 Invalid values stop the server at startup with a message on stderr. No secret is required.
 Text is sent to the configured URL: use a local instance for unpublished manuscripts.
 
-The 30 s default covers loading a language on its first check (see below) plus a text at the
-input limit, with about 2× headroom. It also stays below the 60 s default request timeout of
-MCP SDK clients, so the caller gets this server's structured `TIMEOUT` rather than a generic
-client-side timeout. Raise it on slow hardware; if you raise it above 60 s, raise the
-client's tool-call timeout too.
+The 30 s default leaves headroom for the language-loading and text-check durations measured
+below; it is not a guarantee on other hardware. It is below the installed TypeScript MCP
+SDK's 60 s default request timeout, but each calling client can have a different timeout.
+Configure the caller's tool-call timeout to exceed the server's HTTP timeout plus processing
+and transport overhead, otherwise a client-side timeout can arrive before the structured
+`TIMEOUT`. `health_check` makes two sequential HTTP requests, each with its own timeout.
+Raise both server and caller timeouts as needed on slow hardware.
 
 ## Cold start and readiness
 
@@ -73,17 +75,26 @@ the client gives up (the language keeps loading in the background). A retry woul
 send the manuscript again and add to the load. After a cold-start `TIMEOUT`, a later call in the
 same language is usually fast.
 
-To remove the cold start altogether, let LanguageTool load its languages at startup by adding
-to its `server.properties`:
+To reduce cold-start latency, LanguageTool can prewarm selected pipelines at startup. Add
+the following to its `server.properties` and start LanguageTool with `--config server.properties`:
 
 ```properties
 pipelineCaching=true
 pipelinePrewarming=true
 ```
 
-In the measurement above this made every first check take about 1 s, at the cost of a slower
-start (about 17 s instead of 2 s) and more memory. The port only opens once prewarming is done,
-so `health_check` reports `unavailable` until LanguageTool is ready.
+In the measurement above this made the tested first checks take about 1 s, at the cost of a
+slower start (about 17 s instead of 2 s) and more memory. LanguageTool prewarms a selected set
+of languages and request settings, not every possible language, variant, or rule combination;
+cached pipelines can also be evicted. `pipelineCaching` reuses matching pipelines, while
+`pipelinePrewarming` fills selected pipelines at startup. These are LanguageTool settings:
+the MCP server does not enable them or send warmup checks. See the upstream
+[configuration](https://github.com/languagetool-org/languagetool/blob/master/languagetool-server/src/main/java/org/languagetool/server/HTTPServerConfig.java)
+and [prewarming implementation](https://github.com/languagetool-org/languagetool/blob/master/languagetool-server/src/main/java/org/languagetool/server/TextChecker.java).
+
+In this LanguageTool version the HTTP listener starts after prewarming finishes, so
+`health_check` reports `unavailable` during that startup. A later `ok` establishes HTTP
+liveness; readiness of a particular language and configuration requires a successful check.
 
 ## Privacy and robustness
 
@@ -107,20 +118,26 @@ so `health_check` reports `unavailable` until LanguageTool is ready.
 
 ## Text length limit
 
-LanguageTool's server has no length limit by default (`maxTextLength` is unset) and the
-stdio transport has none either, so this server sets one: 50,000 characters, counted in
-UTF-16 code units like issue offsets. That is about 7,500 words, e.g. a journal article
+LanguageTool's default `maxTextLength` is effectively unbounded. The SDK's stdio transport
+does bound its receive buffer to 10 MiB, but that is a message-byte limit, not a text-length
+policy. This server accepts at most 50,000 characters, counted in UTF-16 code units like
+issue offsets. That is about 7,500 words, e.g. a journal article
 or a thesis chapter section. The value comes from measurements on LanguageTool
 6.9-SNAPSHOT:
 
 - 50,000 characters of French take about 4 s on a warm server, and about 9 s when the
   language is cold, well within the 30 s default timeout.
-- Ordinary prose produces about 4 bytes of response per character (about 0.2 MB). A text
-  with a spelling error on every word produces about 100 bytes per character (about 5 MB),
-  still within the 8 MiB response limit; at 100,000 characters it already exceeded it.
-- A text checked against the wrong language is the exception: LanguageTool then suggests
+- The measured ordinary prose produced about 4 bytes of response per character (about
+  0.2 MB). One sample with a spelling error on every word produced about 100 bytes per
+  character (about 5 MB); at 100,000 characters it exceeded the 8 MiB HTTP response limit.
+  Other error-dense texts can exceed that limit even below 50,000 characters.
+- A text checked against the wrong language can also be large: LanguageTool may suggest
   hundreds of replacements per word, and the response exceeds 8 MiB beyond about 17,000
   characters (French checked as `en-US`). This is reported as `INVALID_RESPONSE`.
+
+These measurements do not guarantee that every accepted text produces a deliverable result.
+Even a response below the HTTP limit can exceed the separate MCP result-size budget after
+normalization and duplication; that also returns `INVALID_RESPONSE`, without partial diagnostics.
 
 The limit is advertised as `maxLength` in the `check_text` input schema. Until built-in
 splitting of long documents is available, callers must split longer texts themselves.

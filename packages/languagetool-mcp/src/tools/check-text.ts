@@ -59,7 +59,7 @@ export function registerCheckTextTool(server: McpServer, client: LanguageToolCli
         '(message, offset/length in UTF-16 code units, replacements, rule and category). ' +
         'This tool only reports issues: it never rewrites the text, and replacements are suggestions to be judged by the caller. ' +
         'The first check in a language can take several seconds while LanguageTool loads it; ' +
-        'after a TIMEOUT, health_check tells a slow LanguageTool (status ok) from an unavailable one.',
+        'after a TIMEOUT, health_check reports HTTP liveness; status ok does not establish language readiness.',
       inputSchema: checkTextInputSchema,
       outputSchema: checkTextResultSchema,
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },

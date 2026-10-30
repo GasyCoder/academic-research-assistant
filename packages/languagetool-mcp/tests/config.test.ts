@@ -6,7 +6,7 @@ describe('loadConfig', () => {
   it('uses defaults when no variable is set', () => {
     expect(loadConfig({})).toEqual({ baseUrl: DEFAULT_BASE_URL, timeoutMs: DEFAULT_TIMEOUT_MS });
     expect(DEFAULT_BASE_URL).toBe('http://127.0.0.1:8081');
-    // Leaves room for loading a language on its first check (measured 4–10 s), below MCP clients' usual 60 s.
+    // Leaves room for the measured 4–10 s language loading, below the TypeScript SDK's 60 s default.
     expect(DEFAULT_TIMEOUT_MS).toBe(30_000);
   });
 
