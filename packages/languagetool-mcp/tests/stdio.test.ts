@@ -1,13 +1,17 @@
 /*
  * End-to-end test of the production entry point: builds the package, spawns
  * `node dist/index.js` against a synthetic LanguageTool server and talks MCP over
- * stdio, using the SDK's own stdio framing (ReadBuffer / serializeMessage).
+ * stdio, first with the SDK's own stdio framing (ReadBuffer / serializeMessage) in
+ * the 2025 handshake mode, then with the official v2 client pinned to the
+ * 2026-07-28 protocol revision.
  */
 import { type ChildProcessWithoutNullStreams, execFileSync, spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { Client } from '@modelcontextprotocol/client';
+import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import {
   type JSONRPCMessage,
   LATEST_PROTOCOL_VERSION,
@@ -17,6 +21,9 @@ import {
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { DEFAULT_MAX_RESPONSE_BYTES, DEFAULT_MAX_TEXT_LENGTH } from '../src/languagetool-client.js';
+import { MAX_DOCUMENT_LENGTH } from '../src/tools/check-document.js';
+import { MAX_MCP_RESULT_BYTES } from '../src/tools/results.js';
+import { fakeCheckResponse, tehOffsets } from './fake-languagetool.js';
 import { emptyCheckResponse, infoResponse, languagesResponse } from './fixtures/languagetool-responses.js';
 import { type TestHttpServer, startHttpServer } from './http-server.js';
 
@@ -38,7 +45,23 @@ function buildPackage(): void {
   });
 }
 
-/** Synthetic LanguageTool: answers normally, except that it echoes manuscripts containing MARKER in a 500 body. */
+/**
+ * A document of `paragraphs` paragraphs; every 50th has a "teh" after an emoji, and `inserts`
+ * replace given paragraphs.
+ */
+function longDocument(paragraphs: number, inserts: Record<number, string> = {}): string {
+  return Array.from(
+    { length: paragraphs },
+    (_, index) =>
+      inserts[index] ??
+      (index % 50 === 7 ? `Paragraph ${index}: 😀 teh issue.` : `Paragraph ${index} describes the method in detail.`),
+  ).join('\n\n');
+}
+
+/**
+ * Synthetic LanguageTool (see fakeCheckResponse: every "teh" is an issue). It echoes manuscripts
+ * containing MARKER in a 500 body, and inflates issue messages of texts containing BIGISSUES.
+ */
 function startFakeLanguageTool(): Promise<TestHttpServer> {
   return startHttpServer((request, response) => {
     const route = `${request.method} ${request.url}`;
@@ -71,7 +94,8 @@ function startFakeLanguageTool(): Promise<TestHttpServer> {
         expect(Buffer.byteLength(JSON.stringify(body))).toBeLessThan(DEFAULT_MAX_RESPONSE_BYTES);
         json(body);
       } else {
-        json(emptyCheckResponse);
+        const language = new URLSearchParams(request.body).get('language') ?? 'en-US';
+        json(fakeCheckResponse(text, language, text.includes('BIGISSUES') ? { messageLength: 3_000 } : {}));
       }
     } else {
       response.writeHead(404);
@@ -139,12 +163,13 @@ class StdioSession {
   }
 }
 
+beforeAll(() => buildPackage(), 60_000);
+
 describe('production stdio server (dist/index.js)', () => {
   let languageTool: TestHttpServer;
   let session: StdioSession;
 
   beforeAll(async () => {
-    buildPackage();
     languageTool = await startFakeLanguageTool();
     const child = spawn(process.execPath, [entryPoint], {
       env: { ...process.env, LANGUAGETOOL_BASE_URL: languageTool.url, LANGUAGETOOL_TIMEOUT_MS: '3000' },
@@ -242,6 +267,59 @@ describe('production stdio server (dist/index.js)', () => {
     expect((await session.callTool('check_text', { text: 'A short sentence.', language: 'en-US' })).isError).toBeFalsy();
   });
 
+  it('checks a long document with offsets in the whole document', async () => {
+    const calls = languageTool.requests.length;
+    const text = longDocument(2_800);
+    expect(text.length).toBeGreaterThan(2 * DEFAULT_MAX_TEXT_LENGTH);
+    const result = await session.callTool('check_document', { text, language: 'en-US' });
+
+    expect(result.isError).toBeFalsy();
+    const content = result.structuredContent as { chunkCount: number; complete: boolean; issues: Array<{ offset: number }> };
+    expect(content.complete).toBe(true);
+    expect(content.chunkCount).toBeGreaterThanOrEqual(3);
+    expect(content.issues.map((issue) => issue.offset)).toEqual(tehOffsets(text));
+    expect(JSON.parse(result.content[0]!.text)).toEqual(content);
+    expect(languageTool.requests.length).toBe(calls + content.chunkCount);
+  });
+
+  it('rejects a document above its limit with TEXT_TOO_LONG, without contacting LanguageTool', async () => {
+    const calls = languageTool.requests.length;
+    const text = `${MANUSCRIPT}\n\n${longDocument(4_000)}`.slice(0, MAX_DOCUMENT_LENGTH + 1);
+    const result = await session.callTool('check_document', { text, language: 'en-US' });
+
+    expect(result.isError).toBe(true);
+    expect(JSON.parse(result.content[0]!.text).error).toMatchObject({ code: 'TEXT_TOO_LONG', httpStatus: null });
+    expect(languageTool.requests.length).toBe(calls);
+  });
+
+  it('returns a partial document result without the content of the failed chunk', async () => {
+    // The chunk holding MARKER gets an HTTP 500 echoing it; the remaining chunks are skipped.
+    const text = longDocument(2_800, { 1_500: MANUSCRIPT });
+    const result = await session.callTool('check_document', { text, language: 'en-US' });
+
+    expect(result.isError).toBeFalsy();
+    const content = result.structuredContent as { complete: boolean; failedRanges: Array<{ code: string; start: number; end: number }> };
+    expect(content.complete).toBe(false);
+    expect(content.failedRanges[0]).toMatchObject({ code: 'HTTP_ERROR' });
+    expect(content.failedRanges.slice(1).every((range) => range.code === 'SKIPPED')).toBe(true);
+    expect(content.failedRanges[0]!.start).toBeLessThan(text.indexOf(MARKER));
+    expect(JSON.stringify(result)).not.toContain(MARKER);
+  });
+
+  it('bounds a large document result and keeps serving the connection', async () => {
+    const text = 'BIGISSUES. A sentence with one teh in it, and more words. '.repeat(2_500);
+    const response = await session.request('tools/call', { name: 'check_document', arguments: { text, language: 'en-US' } });
+    const result = response.result as unknown as ToolResult;
+
+    expect(result.isError).toBeFalsy();
+    expect(result.structuredContent).toMatchObject({ truncated: true, complete: false });
+    expect(Buffer.byteLength(JSON.stringify(response))).toBeLessThan(MAX_MCP_RESULT_BYTES);
+    expect((await session.callTool('health_check', {})).structuredContent).toMatchObject({ status: 'ok' });
+    expect((await session.callTool('check_document', { text: 'A teh.', language: 'en-US' })).structuredContent).toMatchObject({
+      issueCount: 1,
+    });
+  });
+
   it('writes only MCP messages to stdout and never the manuscript to stdout or stderr', () => {
     expect(session.protocolErrors).toEqual([]);
     const lines = session.stdout.split('\n').filter((line) => line !== '');
@@ -263,5 +341,85 @@ describe('production stdio server (dist/index.js)', () => {
       new Promise<'timeout'>((resolve) => setTimeout(() => resolve('timeout'), 5000)),
     ]);
     expect(exit).toEqual({ code: 0, signal: null });
+  });
+});
+
+describe('official MCP client on protocol revision 2026-07-28 (dist/index.js)', () => {
+  let languageTool: TestHttpServer;
+  let client: Client;
+  let stderr = '';
+
+  beforeAll(async () => {
+    languageTool = await startFakeLanguageTool();
+    const transport = new StdioClientTransport({
+      command: process.execPath,
+      args: [entryPoint],
+      env: { ...process.env, LANGUAGETOOL_BASE_URL: languageTool.url, LANGUAGETOOL_TIMEOUT_MS: '3000' },
+      stderr: 'pipe',
+    });
+    transport.stderr?.on('data', (chunk: Buffer) => {
+      stderr += chunk.toString('utf8');
+    });
+    client = new Client({ name: 'modern-test', version: '0' }, { versionNegotiation: { mode: { pin: '2026-07-28' } } });
+    await client.connect(transport);
+  }, 30_000);
+
+  afterAll(async () => {
+    await client?.close();
+    await languageTool?.close();
+  });
+
+  it('negotiates the 2026-07-28 revision and lists the four tools', async () => {
+    expect(client.getNegotiatedProtocolVersion()).toBe('2026-07-28');
+    expect(client.getProtocolEra()).toBe('modern');
+    const { tools } = await client.listTools();
+    expect(tools.map((tool) => tool.name).sort()).toEqual([
+      'check_document',
+      'check_text',
+      'get_supported_languages',
+      'health_check',
+    ]);
+  });
+
+  it('checks a long document and reports progress for each chunk', async () => {
+    const text = longDocument(2_800);
+    const progress: Array<{ progress: number; total?: number }> = [];
+    const result = await client.callTool(
+      { name: 'check_document', arguments: { text, language: 'en-US' } },
+      { onprogress: (update) => progress.push(update), resetTimeoutOnProgress: true },
+    );
+
+    expect(result.isError).toBeFalsy();
+    const content = result.structuredContent as { chunkCount: number; complete: boolean; issues: Array<{ offset: number }> };
+    expect(content.complete).toBe(true);
+    expect(content.issues.map((issue) => issue.offset)).toEqual(tehOffsets(text));
+    expect(progress.map((update) => [update.progress, update.total])).toEqual(
+      Array.from({ length: content.chunkCount }, (_, index) => [index + 1, content.chunkCount]),
+    );
+  });
+
+  it('returns TEXT_TOO_LONG for an oversized document, then keeps serving', async () => {
+    const calls = languageTool.requests.length;
+    const text = `${MANUSCRIPT}\n\n${longDocument(4_000)}`.slice(0, MAX_DOCUMENT_LENGTH + 1);
+    const tooLong = await client.callTool({ name: 'check_document', arguments: { text, language: 'en-US' } });
+
+    expect(tooLong.isError).toBe(true);
+    const [content] = tooLong.content as Array<{ type: string; text: string }>;
+    expect(JSON.parse(content!.text).error).toMatchObject({ code: 'TEXT_TOO_LONG' });
+    expect(languageTool.requests.length).toBe(calls);
+
+    const next = await client.callTool({ name: 'check_text', arguments: { text: 'A teh.', language: 'en-US' } });
+    expect(next.structuredContent).toMatchObject({ issueCount: 1 });
+  });
+
+  it('keeps the manuscript out of results and stderr when a chunk fails', async () => {
+    const result = await client.callTool({
+      name: 'check_document',
+      arguments: { text: longDocument(2_800, { 1_500: MANUSCRIPT }), language: 'en-US' },
+    });
+
+    expect(result.structuredContent).toMatchObject({ complete: false });
+    expect(JSON.stringify(result)).not.toContain(MARKER);
+    expect(stderr).not.toContain(MARKER);
   });
 });
