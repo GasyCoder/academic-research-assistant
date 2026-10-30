@@ -107,10 +107,10 @@ export const checkDocumentResultSchema = z.object({
   documentLength: z.number().int().describe('Length of the document in UTF-16 code units'),
   complete: z
     .boolean()
-    .describe('true only if the whole document was checked and every diagnostic found is returned'),
+    .describe('Every planned chunk succeeded, no owned diagnostic was omitted by the output budget, and no upstream incomplete-results warning was received; not equivalence to a monolithic check'),
   truncated: z
     .boolean()
-    .describe('The output budget was reached: issues at or after truncatedAt are missing and later ranges were not checked'),
+    .describe('The output budget was reached: the first omitted issue starts at truncatedAt and later ranges were not checked; earlier issues at the same offset may be present'),
   truncatedAt: z.number().int().nullable().describe('Offset of the first issue left out, when truncated'),
   incompleteResults: z.boolean().describe('LanguageTool reported incomplete results for at least one range'),
   chunkCount: z.number().int(),

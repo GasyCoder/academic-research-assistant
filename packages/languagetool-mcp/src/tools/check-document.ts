@@ -22,7 +22,7 @@ import { MAX_MCP_RESULT_BYTES, toolFailure, toolSuccess } from './results.js';
  */
 
 /**
- * Longest document accepted, in UTF-16 code units: two check_text requests, about 15,000 words.
+ * Longest document accepted, in UTF-16 code units: twice the check_text input limit, about 15,000 words.
  * French, the slowest language measured, took 12 s at this length on a warm server and 20 s on a
  * freshly started one, leaving about three times that under the 60 s default request timeout of the
  * MCP SDK clients. At 150,000 units it took up to 42 s (fresh server, loaded machine): too close.
@@ -241,8 +241,9 @@ export function registerCheckDocumentTool(server: McpServer, client: LanguageToo
         `Analyse a document longer than check_text accepts (up to ${MAX_DOCUMENT_LENGTH} characters) with LanguageTool. ` +
         'It is split at paragraph or sentence boundaries and checked part by part, one request at a time; issue offsets ' +
         '(UTF-16 code units) refer to the whole document. The result is bounded: at most ' +
-        `${MAX_DOCUMENT_ISSUES} issues and ${MAX_REPLACEMENTS_PER_ISSUE} replacements per issue. Unless \`complete\` is true, ` +
-        'diagnostics are missing: see `truncated`, `truncatedAt` and `failedRanges`. Sends progress notifications when ' +
+        `${MAX_DOCUMENT_ISSUES} issues and ${MAX_REPLACEMENTS_PER_ISSUE} replacements per issue. ` +
+        '`complete` means all chunks succeeded without omitted owned diagnostics or upstream incomplete-results warnings; ' +
+        'it does not promise equivalence to a monolithic check. See `truncated`, `truncatedAt` and `failedRanges`. Sends progress notifications when ' +
         'the request has a progress token. Like check_text, it never rewrites the text.',
       inputSchema: checkDocumentInputSchema,
       outputSchema: checkDocumentResultSchema,

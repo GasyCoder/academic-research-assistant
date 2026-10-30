@@ -146,6 +146,13 @@ normalization and duplication; that also returns `INVALID_RESPONSE`, without par
 The limit is advertised as `maxLength` in the `check_text` input schema. For a longer
 text, use `check_document`.
 
+Both text tools emit a real JSON Schema `maxLength` keyword through Zod metadata, while
+their handlers enforce the UTF-16 limit and return structured `TEXT_TOO_LONG` errors.
+JSON Schema counts Unicode code points, so its advertised limit is a necessary upper
+bound; a string containing astral characters may pass that constraint yet exceed the
+handler's UTF-16 limit. A client that validates the schema before calling the server
+can reject oversized arguments locally, without receiving our structured error.
+
 ## Long documents
 
 | Tool             | Use for                                 | Limit (UTF-16 code units) |
@@ -172,8 +179,9 @@ the parts to LanguageTool one at a time; the caller never handles the parts.
   (for example an exceptionally long cluster of combining marks), the core falls back to
   a code-point boundary to guarantee progress within the request limit.
 - Context is added only at artificial cuts, i.e. anything but a paragraph break: whole
-  sentences of the same paragraph, so that LanguageTool sees complete sentences and paired
-  brackets around the cut. A paragraph break gets none.
+  sentences of the same paragraph are preferred when they fit. Otherwise context falls
+  back to whitespace or grapheme boundaries within the same budget, so complete sentences
+  and paired brackets cannot always be preserved. A paragraph break gets none.
 
 ### Offsets and duplicates
 
@@ -188,8 +196,8 @@ the parts to LanguageTool one at a time; the caller never handles the parts.
 
 | Field                                                                        | Meaning                                                                                                                                                                      |
 | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `complete`                                                                   | `true` only if every part was checked and every diagnostic found is returned.                                                                                                |
-| `truncated`, `truncatedAt`                                                   | The output budget was reached. Every issue before `truncatedAt` is returned, none at or after it, and the remaining parts were not checked.                                  |
+| `complete`                                                                   | Every planned part succeeded, no owned diagnostic was omitted by our output budget, and LanguageTool reported no incomplete results. This does not promise equivalence to a monolithic check. |
+| `truncated`, `truncatedAt`                                                   | The output budget was reached; `truncatedAt` is the first omitted owned issue's offset. The returned issues form a prefix from successful parts; an earlier rule at that same offset may already be included. Remaining parts were not checked. |
 | `failedRanges`                                                               | Parts without diagnostics: `chunkIndex`, `start`, `end` (document offsets) and `code`, the error of the request or `SKIPPED` (not sent because processing stopped). No text. |
 | `chunkCount`, `processedChunkCount`, `failedChunkCount`, `skippedChunkCount` | The three counts add up to `chunkCount`.                                                                                                                                     |
 | `issues`                                                                     | In document order, at most 5 replacements each; `replacementsTruncated` tells when LanguageTool suggested more.                                                              |
@@ -215,7 +223,7 @@ the parts to LanguageTool one at a time; the caller never handles the parts.
 | Limit                        | Value          | Basis                                                          |
 | ---------------------------- | -------------- | -------------------------------------------------------------- |
 | Request (core + context)     | 50,000         | the `check_text` limit, reused per part                        |
-| Core of a part               | 48,000         | request limit minus context on both sides                      |
+| Core of a segmented part     | 48,000         | request limit minus context on both sides                      |
 | Context at an artificial cut | 1,000 per side | several whole sentences of prose                               |
 | Document                     | 100,000        | French: 12 s warm, 20 s on a fresh server                      |
 | Issues                       | 1,650          | 3 × 5.5 issues per 1,000 units (densest measured) at the limit |
@@ -249,6 +257,15 @@ progress (`resetTimeoutOnProgress` in the TypeScript SDK). If the caller cancels
 request, no further part is sent.
 
 ### Effect of the cuts
+
+Ownership prevents duplicates introduced by overlapping requests; it cannot guarantee
+that neighbouring requests detect identical issues. An issue starting in overlap is
+discarded even if its owning request did not detect it. A diagnostic longer than the
+available context, or a rule requiring distant paragraphs, can be missed. Limited
+context and artificial request edges can also introduce boundary false positives.
+`complete` describes execution of our pipeline, not linguistic completeness or recall
+relative to a single full-document request. Replacement limits are reported separately
+by `replacementsTruncated` and do not make `complete` false.
 
 Compared with a single request over the same text (150,000 units of generic academic prose,
 4 parts): English gave identical issues (427); French returned 708 of 710, missing two

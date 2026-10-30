@@ -13,7 +13,7 @@ import {
 } from '../src/tools/check-document.js';
 import { MAX_MCP_RESULT_BYTES, toolSuccess } from '../src/tools/results.js';
 import { checkDocumentResultSchema } from '../src/types.js';
-import { fakeLanguageToolFetch, tehOffsets } from './fake-languagetool.js';
+import { fakeCheckResponse, fakeLanguageToolFetch, tehOffsets } from './fake-languagetool.js';
 import { TEST_BASE_URL } from './helpers.js';
 
 /** Small requests so that short documents span several chunks: cores of at most 220 units. */
@@ -46,6 +46,53 @@ async function captureError(promise: Promise<unknown>): Promise<LanguageToolErro
 }
 
 describe('check_document offsets', () => {
+  it('owns crossing ranges by their start, including zero-width boundary and EOF issues', async () => {
+    const text = 'x'.repeat(1_000);
+    const segments = segmentDocument(text, { maxRequestLength: SMALL.maxTextLength, contextLength: SMALL.contextLength });
+    const boundary = segments[0]!.coreEnd;
+    const expected = [
+      { offset: boundary - 3, length: 8, ruleId: 'CROSS' },
+      { offset: boundary, length: 0, ruleId: 'INSERT' },
+      { offset: boundary, length: 1, ruleId: 'OTHER' },
+      { offset: boundary + 5, length: 1, ruleId: 'RIGHT' },
+      { offset: text.length, length: 0, ruleId: 'EOF' },
+    ];
+    let calls = 0;
+    const fetch: FetchLike = async () => {
+      const segment = segments[calls++]!;
+      const raw = fakeCheckResponse('');
+      return new Response(JSON.stringify({ ...raw, matches: expected
+        .filter((issue) => issue.offset >= segment.start && issue.offset + issue.length <= segment.end)
+        .map((issue) => ({
+          message: 'Crossing range', offset: issue.offset - segment.start, length: issue.length,
+          context: { text: 'x'.repeat(issue.length + 4), offset: 2, length: issue.length },
+          rule: { id: issue.ruleId },
+        })) }));
+    };
+    const result = await runCheckDocument(smallClient(fetch), input(text), {}, SMALL);
+    expect(result.issues.map(({ offset, length, ruleId }) => ({ offset, length, ruleId }))).toEqual(expected);
+    expect(result.issues.every((issue) => issue.context!.offset === 2)).toBe(true);
+    expect(calls).toBe(segments.length);
+  });
+
+  it('does not promise monolithic completeness for a diagnostic longer than the overlap', async () => {
+    const text = 'x'.repeat(1_000);
+    const segments = segmentDocument(text, { maxRequestLength: SMALL.maxTextLength, contextLength: SMALL.contextLength });
+    const offset = segments[0]!.coreEnd - 45;
+    const length = 90;
+    let calls = 0;
+    const fetch: FetchLike = async () => {
+      const segment = segments[calls++]!;
+      return new Response(JSON.stringify({ ...fakeCheckResponse(''), matches:
+        offset >= segment.start && offset + length <= segment.end
+          ? [{ message: 'Long rule', offset: offset - segment.start, length, rule: { id: 'LONG' } }]
+          : [],
+      }));
+    };
+    const result = await runCheckDocument(smallClient(fetch), input(text), {}, SMALL);
+    expect(result).toMatchObject({ complete: true, issueCount: 0, processedChunkCount: segments.length });
+  });
+
   it('checks a document that fits in one request like check_text', async () => {
     const fake = fakeLanguageToolFetch();
     const text = 'One teh here. Another teh there.';
@@ -125,6 +172,17 @@ describe('check_document offsets', () => {
 });
 
 describe('check_document requests', () => {
+  it('sends no additional chunk when cancellation happens during an HTTP request', async () => {
+    const fake = fakeLanguageToolFetch();
+    const controller = new AbortController();
+    const fetch: FetchLike = async (url, init) => {
+      controller.abort();
+      return fake.fetch(url, init);
+    };
+    await expect(runCheckDocument(smallClient(fetch), input(documentOf(10)), { signal: controller.signal }, SMALL)).rejects.toThrow();
+    expect(fake.state.requests).toHaveLength(1);
+  });
+
   it('sends the language and options with every chunk', async () => {
     const fake = fakeLanguageToolFetch();
     await runCheckDocument(
@@ -290,6 +348,19 @@ describe('check_document partial failures', () => {
 });
 
 describe('check_document output budget', () => {
+  it('may keep an earlier rule at truncatedAt when two diagnostics share an offset', async () => {
+    const fake = fakeLanguageToolFetch();
+    const result = await runCheckDocument(smallClient(fake.fetch), input('DOUBLE'), {}, { ...SMALL, maxIssues: 1 });
+    expect(result).toMatchObject({ truncated: true, truncatedAt: 0, complete: false, issueCount: 1, processedChunkCount: 1 });
+    expect(result.issues[0]).toMatchObject({ offset: 0, ruleId: 'FAKE_RULE_A' });
+  });
+
+  it('propagates the upstream incomplete-results warning without calling it budget truncation', async () => {
+    const fetch: FetchLike = async () => new Response(JSON.stringify({ ...fakeCheckResponse(''), warnings: { incompleteResults: true } }));
+    const result = await runCheckDocument(smallClient(fetch), input('text'), {}, SMALL);
+    expect(result).toMatchObject({ complete: false, truncated: false, truncatedAt: null, incompleteResults: true });
+  });
+
   it('returns at most MAX_DOCUMENT_ISSUES issues and says where it stopped', async () => {
     const fake = fakeLanguageToolFetch();
     const text = 'teh '.repeat(5_000);
@@ -347,6 +418,20 @@ describe('check_document output budget', () => {
 });
 
 describe('check_document length limit', () => {
+  it('counts astral characters in UTF-16 units and rejects 100,001 before HTTP', async () => {
+    const fake = fakeLanguageToolFetch();
+    const client = new LanguageToolClient({ baseUrl: TEST_BASE_URL, timeoutMs: 5000, fetch: fake.fetch });
+    const text = '😀'.repeat(50_000);
+    const result = await runCheckDocument(client, input(text));
+    expect(result).toMatchObject({ complete: true, documentLength: 100_000 });
+    expect(fake.texts().every((chunk) => chunk.length <= 50_000 && chunk.length % 2 === 0)).toBe(true);
+    const calls = fake.state.requests.length;
+    const error = await captureError(runCheckDocument(client, input(`${text}x`)));
+    expect(error.code).toBe('TEXT_TOO_LONG');
+    expect(fake.state.requests).toHaveLength(calls);
+    expect(JSON.stringify(error.toDetails())).not.toContain('😀');
+  });
+
   it('advertises the limit in its input schema', () => {
     expect(MAX_DOCUMENT_LENGTH).toBe(100_000);
     expect(MAX_DOCUMENT_ISSUES).toBe(1_650);
