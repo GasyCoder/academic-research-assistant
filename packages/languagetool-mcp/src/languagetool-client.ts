@@ -191,7 +191,7 @@ export class LanguageToolClient {
         throw error;
       }
       if (signal.aborted) {
-        throw this.toTransportError(error, endpoint);
+        throw this.toTransportError(error, endpoint, response.status);
       }
       throw new LanguageToolError('INVALID_RESPONSE', 'Failed to read the LanguageTool response body', {
         endpoint,
@@ -201,13 +201,15 @@ export class LanguageToolClient {
     }
   }
 
-  private toTransportError(error: unknown, endpoint: string): LanguageToolError {
+  /** `httpStatus` is set when the failure happened after the response headers were received. */
+  private toTransportError(error: unknown, endpoint: string, httpStatus?: number): LanguageToolError {
     if (isTimeoutError(error)) {
-      return new LanguageToolError(
-        'TIMEOUT',
-        `LanguageTool did not answer within ${this.timeoutMs} ms (${this.baseUrl})`,
-        { endpoint, cause: error },
-      );
+      const message =
+        httpStatus === undefined
+          ? `LanguageTool did not answer within ${this.timeoutMs} ms (${this.baseUrl})`
+          : `LanguageTool sent HTTP ${httpStatus} headers but did not complete the response ` +
+            `within ${this.timeoutMs} ms (${this.baseUrl})`;
+      return new LanguageToolError('TIMEOUT', message, { endpoint, httpStatus, cause: error });
     }
     const code = networkErrorCode(error);
     return new LanguageToolError(

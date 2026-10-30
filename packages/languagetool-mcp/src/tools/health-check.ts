@@ -17,7 +17,8 @@ export async function runHealthCheck(client: LanguageToolClient): Promise<Health
     if (!(error instanceof LanguageToolError)) {
       throw error;
     }
-    const reachable = error.code === 'HTTP_ERROR' || error.code === 'INVALID_RESPONSE';
+    // Reachable means LanguageTool sent an HTTP response, even if its body later failed or timed out.
+    const reachable = error.httpStatus !== null || error.code === 'HTTP_ERROR';
     return {
       status: reachable ? 'unhealthy' : 'unavailable',
       reachable,

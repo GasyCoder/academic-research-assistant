@@ -1,7 +1,7 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { LanguageToolError } from '../src/errors.js';
-import type { FetchLike } from '../src/languagetool-client.js';
+import { type FetchLike, LanguageToolClient } from '../src/languagetool-client.js';
 import { checkTextInputSchema, runCheckText } from '../src/tools/check-text.js';
 import { runGetSupportedLanguages } from '../src/tools/get-supported-languages.js';
 import { runHealthCheck } from '../src/tools/health-check.js';
@@ -22,6 +22,7 @@ import {
   routeFetch,
   textResponse,
 } from './helpers.js';
+import { type TestHttpServer, startHttpServer } from './http-server.js';
 
 describe('health_check', () => {
   it('reports ok with version information', async () => {
@@ -72,6 +73,51 @@ describe('health_check', () => {
     const result = await runHealthCheck(client);
     expect(result).toMatchObject({ status: 'unhealthy', reachable: true });
     expect(result.error?.httpStatus).toBe(503);
+  });
+});
+
+describe('health_check against a real HTTP server', () => {
+  let httpServer: TestHttpServer | undefined;
+  afterEach(async () => {
+    await httpServer?.close();
+    httpServer = undefined;
+  });
+  const clientFor = (server: TestHttpServer) => new LanguageToolClient({ baseUrl: server.url, timeoutMs: 200 });
+
+  it('is unavailable when the server accepts the connection but never answers', async () => {
+    httpServer = await startHttpServer(() => {
+      // Never responds.
+    });
+    const result = await runHealthCheck(clientFor(httpServer));
+
+    expect(result).toMatchObject({ status: 'unavailable', reachable: false });
+    expect(result.error).toMatchObject({ code: 'TIMEOUT', httpStatus: null });
+  });
+
+  it('is reachable but unhealthy when headers arrive and the body times out', async () => {
+    httpServer = await startHttpServer((_request, response) => {
+      response.writeHead(200, { 'Content-Type': 'text/plain' });
+      response.write('O');
+      // The rest of the body never comes.
+    });
+    const result = await runHealthCheck(clientFor(httpServer));
+
+    expect(result).toMatchObject({ status: 'unhealthy', reachable: true });
+    expect(result.error).toMatchObject({ code: 'TIMEOUT', httpStatus: 200, endpoint: '/v2/healthcheck' });
+    expect(result.error?.message).toContain('HTTP 200');
+  });
+
+  it('is reachable but unhealthy when the body is cut off', async () => {
+    httpServer = await startHttpServer((_request, response) => {
+      response.writeHead(200, { 'Content-Type': 'text/plain', 'Content-Length': '100' });
+      response.write('OK');
+      // Let the headers reach the client before cutting the connection.
+      setTimeout(() => response.destroy(), 50);
+    });
+    const result = await runHealthCheck(clientFor(httpServer));
+
+    expect(result).toMatchObject({ status: 'unhealthy', reachable: true });
+    expect(result.error).toMatchObject({ code: 'INVALID_RESPONSE', httpStatus: 200 });
   });
 });
 

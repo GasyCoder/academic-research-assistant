@@ -23,8 +23,11 @@ export const softwareInfoSchema = z.object({
 export const healthCheckResultSchema = z.object({
   status: z
     .enum(['ok', 'unhealthy', 'unavailable'])
-    .describe('ok: healthy; unhealthy: answered with an error; unavailable: no answer (offline or timeout)'),
-  reachable: z.boolean().describe('Whether an HTTP response was received from LanguageTool'),
+    .describe(
+      'ok: healthy; unhealthy: LanguageTool answered but its response was an error, invalid, incomplete or too slow; ' +
+        'unavailable: no HTTP response (offline, refused, or no answer before the timeout)',
+    ),
+  reachable: z.boolean().describe('Whether LanguageTool sent an HTTP response (status and headers)'),
   baseUrl: z.string(),
   software: softwareInfoSchema.nullable().describe('Server version, when it can be retrieved'),
   error: toolErrorSchema.nullable(),

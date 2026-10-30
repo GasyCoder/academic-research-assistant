@@ -13,6 +13,7 @@ export interface LanguageToolErrorDetails {
   message: string;
   /** API path that failed, e.g. /v2/check. Never contains request content. */
   endpoint: string;
+  /** Status of the HTTP response; non-null exactly when response headers were received. */
   httpStatus: number | null;
 }
 
