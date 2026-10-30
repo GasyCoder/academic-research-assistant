@@ -48,7 +48,9 @@ export function registerHealthCheckTool(server: McpServer, client: LanguageToolC
       title: 'LanguageTool health check',
       description:
         'Check whether the configured LanguageTool server is reachable and report its version. ' +
-        'Sends no text. Never fails when LanguageTool is offline: inspect `status`, `reachable` and `error`.',
+        'Sends no text. Never fails when LanguageTool is offline: inspect `status`, `reachable` and `error`. ' +
+        '`ok` means the server answers; the first check_text call in each language can still take several seconds ' +
+        'while LanguageTool loads that language.',
       outputSchema: healthCheckResultSchema,
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
     },

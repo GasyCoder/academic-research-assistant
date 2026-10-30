@@ -6,7 +6,9 @@ export type LanguageToolErrorCode =
   /** LanguageTool answered with a non-2xx status. */
   | 'HTTP_ERROR'
   /** LanguageTool answered 2xx but the body is not valid JSON or lacks required fields. */
-  | 'INVALID_RESPONSE';
+  | 'INVALID_RESPONSE'
+  /** The text exceeds the per-check length limit; it was not sent. The caller must split it. */
+  | 'TEXT_TOO_LONG';
 
 export interface LanguageToolErrorDetails {
   code: LanguageToolErrorCode;

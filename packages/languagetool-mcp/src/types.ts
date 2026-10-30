@@ -7,7 +7,7 @@ import { z } from 'zod';
  */
 
 export const toolErrorSchema = z.object({
-  code: z.enum(['TIMEOUT', 'UNREACHABLE', 'HTTP_ERROR', 'INVALID_RESPONSE', 'INTERNAL_ERROR']),
+  code: z.enum(['TIMEOUT', 'UNREACHABLE', 'HTTP_ERROR', 'INVALID_RESPONSE', 'TEXT_TOO_LONG', 'INTERNAL_ERROR']),
   message: z.string(),
   endpoint: z.string().nullable(),
   httpStatus: z.number().int().nullable(),

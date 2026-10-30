@@ -19,11 +19,21 @@ export type FetchLike = (input: string, init: RequestInit) => Promise<Response>;
  */
 export const DEFAULT_MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
 
+/**
+ * Longest text sent in one check, in UTF-16 code units (JavaScript string length, like issue offsets).
+ * About 7,500 words. Measured on a warm LanguageTool: ~4 s per check, and ~5 MB of response for a text
+ * with a spelling error on every word, within DEFAULT_MAX_RESPONSE_BYTES. Longer texts are rejected,
+ * never truncated.
+ */
+export const DEFAULT_MAX_TEXT_LENGTH = 50_000;
+
 export interface LanguageToolClientOptions extends LanguageToolConfig {
   /** HTTP implementation; defaults to the global fetch. Injected in tests. */
   fetch?: FetchLike;
   /** Defaults to DEFAULT_MAX_RESPONSE_BYTES. */
   maxResponseBytes?: number;
+  /** Defaults to DEFAULT_MAX_TEXT_LENGTH. */
+  maxTextLength?: number;
 }
 
 export interface CheckRequest {
@@ -44,12 +54,14 @@ export interface CheckRequest {
 export class LanguageToolClient {
   readonly baseUrl: string;
   readonly timeoutMs: number;
+  readonly maxTextLength: number;
   private readonly fetchImpl: FetchLike;
   private readonly maxResponseBytes: number;
 
   constructor(options: LanguageToolClientOptions) {
     this.baseUrl = options.baseUrl;
     this.timeoutMs = options.timeoutMs;
+    this.maxTextLength = options.maxTextLength ?? DEFAULT_MAX_TEXT_LENGTH;
     this.maxResponseBytes = options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES;
     this.fetchImpl = options.fetch ?? ((input, init) => fetch(input, init));
   }
@@ -72,6 +84,15 @@ export class LanguageToolClient {
   }
 
   async check(request: CheckRequest): Promise<RawCheckResponse> {
+    if (request.text.length > this.maxTextLength) {
+      // The length is reported, never the content.
+      throw new LanguageToolError(
+        'TEXT_TOO_LONG',
+        `Text has ${request.text.length} characters (UTF-16 code units), above the ${this.maxTextLength}-character ` +
+          'limit per check; split it and check the parts separately',
+        { endpoint: '/v2/check' },
+      );
+    }
     const body = new URLSearchParams({ text: request.text, language: request.language });
     if (request.level !== undefined) {
       body.set('level', request.level);

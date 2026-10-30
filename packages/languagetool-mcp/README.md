@@ -32,10 +32,69 @@ diagnostics are written to stderr and never include the analysed text.
 | Variable                  | Default                 | Description                                        |
 | ------------------------- | ----------------------- | -------------------------------------------------- |
 | `LANGUAGETOOL_BASE_URL`   | `http://127.0.0.1:8081` | LanguageTool server URL (`http` or `https`).       |
-| `LANGUAGETOOL_TIMEOUT_MS` | `10000`                 | Per-request timeout in milliseconds (1–300000).    |
+| `LANGUAGETOOL_TIMEOUT_MS` | `30000`                 | Per-request timeout in milliseconds (1–300000).    |
 
 Invalid values stop the server at startup with a message on stderr. No secret is required.
 Text is sent to the configured URL: use a local instance for unpublished manuscripts.
+
+The 30 s default leaves headroom for the language-loading and text-check durations measured
+below; it is not a guarantee on other hardware. It is below the installed TypeScript MCP
+SDK's 60 s default request timeout, but each calling client can have a different timeout.
+Configure the caller's tool-call timeout to exceed the server's HTTP timeout plus processing
+and transport overhead, otherwise a client-side timeout can arrive before the structured
+`TIMEOUT`. `health_check` makes two sequential HTTP requests, each with its own timeout.
+Raise both server and caller timeouts as needed on slow hardware.
+
+## Cold start and readiness
+
+LanguageTool loads each language lazily, on the first `/v2/check` that uses it. Measured
+with LanguageTool 6.9-SNAPSHOT on a 12-core machine:
+
+| Request                                  | Duration   |
+| ---------------------------------------- | ---------- |
+| `/v2/healthcheck`, 1–2 s after JVM start | < 10 ms    |
+| first check in `en-US`                   | ~4 s       |
+| first check in `fr`                      | 6–10 s     |
+| first check in `de-DE`                   | ~9.5 s     |
+| next short checks in the same language   | 0.01–1.5 s |
+| 50,000 characters of French, warm        | ~4 s       |
+
+`/v2/healthcheck` stays instant while a language is loading, so `health_check` reports
+*liveness*, not readiness: `ok` does not mean that every language is loaded.
+
+| `health_check` | `check_text`                | Meaning                                                                                               |
+| -------------- | --------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `ok`           | succeeds, first call slower | Normal cold start.                                                                                    |
+| `ok`           | `TIMEOUT`                   | LanguageTool is up, but the check exceeded the timeout: cold language on slow hardware, or long text. |
+| `unavailable`  | `UNREACHABLE` or `TIMEOUT`  | LanguageTool is not running, or not answering at all.                                                 |
+| `unhealthy`    | any error                   | LanguageTool answers, but with errors or invalid data.                                                |
+
+The server never retries a request on its own. A timeout does not tell a language being
+loaded from an overloaded or stuck server, and LanguageTool keeps processing a request after
+the client gives up (the language keeps loading in the background). A retry would therefore
+send the manuscript again and add to the load. After a cold-start `TIMEOUT`, a later call in the
+same language is usually fast.
+
+To reduce cold-start latency, LanguageTool can prewarm selected pipelines at startup. Add
+the following to its `server.properties` and start LanguageTool with `--config server.properties`:
+
+```properties
+pipelineCaching=true
+pipelinePrewarming=true
+```
+
+In the measurement above this made the tested first checks take about 1 s, at the cost of a
+slower start (about 17 s instead of 2 s) and more memory. LanguageTool prewarms a selected set
+of languages and request settings, not every possible language, variant, or rule combination;
+cached pipelines can also be evicted. `pipelineCaching` reuses matching pipelines, while
+`pipelinePrewarming` fills selected pipelines at startup. These are LanguageTool settings:
+the MCP server does not enable them or send warmup checks. See the upstream
+[configuration](https://github.com/languagetool-org/languagetool/blob/master/languagetool-server/src/main/java/org/languagetool/server/HTTPServerConfig.java)
+and [prewarming implementation](https://github.com/languagetool-org/languagetool/blob/master/languagetool-server/src/main/java/org/languagetool/server/TextChecker.java).
+
+In this LanguageTool version the HTTP listener starts after prewarming finishes, so
+`health_check` reports `unavailable` during that startup. A later `ok` establishes HTTP
+liveness; readiness of a particular language and configuration requires a successful check.
 
 ## Privacy and robustness
 
@@ -46,8 +105,42 @@ Text is sent to the configured URL: use a local instance for unpublished manuscr
   of unexpected exceptions is never forwarded.
 - Response bodies larger than 8 MiB (`DEFAULT_MAX_RESPONSE_BYTES`) are rejected
   while streaming, with an `INVALID_RESPONSE` error.
+- Tool results larger than 8 MiB (`MAX_MCP_RESULT_BYTES`), including both `content`
+  and `structuredContent` and their JSON escaping, are replaced by a small
+  `INVALID_RESPONSE` error before transmission. Diagnostics are never silently
+  truncated. This leaves room for protocol metadata under the SDK's default
+  10 MiB stdio receive buffer. The connection remains usable for a shorter check.
 - Issue ranges outside the submitted text, or context ranges outside their context
   text, are rejected as `INVALID_RESPONSE`.
+- `check_text` accepts at most 50,000 characters (`DEFAULT_MAX_TEXT_LENGTH`, see below).
+  A longer text is rejected with `TEXT_TOO_LONG` before anything is sent, and is never
+  truncated.
+
+## Text length limit
+
+LanguageTool's default `maxTextLength` is effectively unbounded. The SDK's stdio transport
+does bound its receive buffer to 10 MiB, but that is a message-byte limit, not a text-length
+policy. This server accepts at most 50,000 characters, counted in UTF-16 code units like
+issue offsets. That is about 7,500 words, e.g. a journal article
+or a thesis chapter section. The value comes from measurements on LanguageTool
+6.9-SNAPSHOT:
+
+- 50,000 characters of French take about 4 s on a warm server, and about 9 s when the
+  language is cold, well within the 30 s default timeout.
+- The measured ordinary prose produced about 4 bytes of response per character (about
+  0.2 MB). One sample with a spelling error on every word produced about 100 bytes per
+  character (about 5 MB); at 100,000 characters it exceeded the 8 MiB HTTP response limit.
+  Other error-dense texts can exceed that limit even below 50,000 characters.
+- A text checked against the wrong language can also be large: LanguageTool may suggest
+  hundreds of replacements per word, and the response exceeds 8 MiB beyond about 17,000
+  characters (French checked as `en-US`). This is reported as `INVALID_RESPONSE`.
+
+These measurements do not guarantee that every accepted text produces a deliverable result.
+Even a response below the HTTP limit can exceed the separate MCP result-size budget after
+normalization and duplication; that also returns `INVALID_RESPONSE`, without partial diagnostics.
+
+The limit is advertised as `maxLength` in the `check_text` input schema. Until built-in
+splitting of long documents is available, callers must split longer texts themselves.
 
 ## Tools
 
@@ -75,7 +168,7 @@ No input. Returns the languages installed on the server (`/v2/languages`):
 
 | Input                | Required | Description                                                       |
 | -------------------- | -------- | ----------------------------------------------------------------- |
-| `text`               | yes      | Text to analyse; must not be empty or whitespace only.            |
+| `text`               | yes      | Text to analyse; not blank; at most 50,000 UTF-16 code units.     |
 | `language`           | yes      | A `longCode` from `get_supported_languages` (e.g. `fr`, `en-US`), or `auto`. |
 | `level`              | no       | `default` or `picky` (enables stricter LanguageTool rules).        |
 | `disabledRules`      | no       | LanguageTool rule ids to ignore.                                   |
@@ -89,8 +182,8 @@ and `categoryName`. Offsets are UTF-16 code units, i.e. JavaScript string indice
 
 ### Errors
 
-When LanguageTool cannot be used, `check_text` and `get_supported_languages`
-return an MCP error result (`isError: true`) whose text is JSON:
+When LanguageTool cannot be used, or the text is too long, `check_text` and
+`get_supported_languages` return an MCP error result (`isError: true`) whose text is JSON:
 
 ```json
 { "error": { "code": "UNREACHABLE", "message": "LanguageTool is unreachable at http://127.0.0.1:8081 (ECONNREFUSED)", "endpoint": "/v2/check", "httpStatus": null } }
@@ -98,8 +191,15 @@ return an MCP error result (`isError: true`) whose text is JSON:
 
 Codes: `TIMEOUT`, `UNREACHABLE`, `HTTP_ERROR` (e.g. unknown language → 400, or a
 redirect), `INVALID_RESPONSE` (invalid, incomplete, inconsistent or oversized
-response), `INTERNAL_ERROR`. `httpStatus` is non-null whenever LanguageTool sent
-response headers.
+response), `TEXT_TOO_LONG` (the text exceeds the length limit; nothing was sent, and
+the message gives the text's length and the limit, never its content), `INTERNAL_ERROR`.
+For HTTP failures, `httpStatus` is non-null whenever LanguageTool sent response
+headers. A local MCP result-size rejection has `endpoint: null` and
+`httpStatus: null`, since it describes the tool output rather than an HTTP failure.
+
+Arguments that do not match the input schema (blank text, malformed language code,
+unknown `level`) are rejected by the MCP SDK before the tool runs, with a plain-text
+`Input validation error: …` result (`isError: true`).
 
 ## Minimal usage
 

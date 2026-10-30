@@ -1,7 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 
-import type { LanguageToolClient } from '../languagetool-client.js';
+import { DEFAULT_MAX_TEXT_LENGTH, type LanguageToolClient } from '../languagetool-client.js';
 import { toCheckTextResult } from '../transform.js';
 import { type CheckTextResult, checkTextResultSchema } from '../types.js';
 import { toolFailure, toolSuccess } from './results.js';
@@ -17,7 +17,14 @@ export const checkTextInputSchema = z.object({
   text: z
     .string()
     .refine((value) => value.trim().length > 0, { message: 'text must not be empty' })
-    .describe('Text to analyse. It is sent unchanged to LanguageTool and is never rewritten.'),
+    // maxLength is only advertised here: the client enforces it, so that the caller gets a structured
+    // TEXT_TOO_LONG error rather than the SDK's plain-text validation message.
+    .meta({
+      description:
+        `Text to analyse, at most ${DEFAULT_MAX_TEXT_LENGTH} characters (UTF-16 code units); a longer text is ` +
+        'rejected with TEXT_TOO_LONG, never truncated. It is sent unchanged to LanguageTool and is never rewritten.',
+      maxLength: DEFAULT_MAX_TEXT_LENGTH,
+    }),
   language: z
     .string()
     .trim()
@@ -50,7 +57,9 @@ export function registerCheckTextTool(server: McpServer, client: LanguageToolCli
       description:
         'Analyse text with LanguageTool and return the detected spelling, grammar and style issues as structured data ' +
         '(message, offset/length in UTF-16 code units, replacements, rule and category). ' +
-        'This tool only reports issues: it never rewrites the text, and replacements are suggestions to be judged by the caller.',
+        'This tool only reports issues: it never rewrites the text, and replacements are suggestions to be judged by the caller. ' +
+        'The first check in a language can take several seconds while LanguageTool loads it; ' +
+        'after a TIMEOUT, health_check reports HTTP liveness; status ok does not establish language readiness.',
       inputSchema: checkTextInputSchema,
       outputSchema: checkTextResultSchema,
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },

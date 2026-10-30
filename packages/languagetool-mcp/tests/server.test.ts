@@ -4,9 +4,9 @@ import { join } from 'node:path';
 import { InMemoryTransport, type JSONRPCMessage } from '@modelcontextprotocol/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { FetchLike, LanguageToolClient } from '../src/languagetool-client.js';
+import { DEFAULT_MAX_TEXT_LENGTH, type FetchLike, type LanguageToolClient } from '../src/languagetool-client.js';
 import { SERVER_NAME, SERVER_VERSION, createServer } from '../src/server.js';
-import { englishCheckResponse, englishText } from './fixtures/languagetool-responses.js';
+import { emptyCheckResponse, englishCheckResponse, englishText } from './fixtures/languagetool-responses.js';
 import { connectionRefused, createClient, jsonResponse, routeFetch } from './helpers.js';
 
 type JsonRpcResult = { id: number; result?: Record<string, unknown>; error?: { message: string } };
@@ -122,6 +122,54 @@ describe('MCP server', () => {
 
     expect(response.result?.isError).toBeFalsy();
     expect(response.result?.structuredContent).toMatchObject({ status: 'unavailable', reachable: false });
+  });
+});
+
+describe('check_text input length limit over MCP', () => {
+  const MARKER = 'UNPUBLISHED-RESULT-7';
+  /** A text of exactly `length` UTF-16 code units containing MARKER. */
+  const textOfLength = (length: number) => `${MARKER} `.padEnd(length, 'Lorem ipsum dolor sit amet. ');
+
+  it('advertises the limit as maxLength in the check_text input schema', async () => {
+    const session = await connect(routeFetch({}));
+    close = session.close;
+    const response = await session.request('tools/list');
+    const tools = response.result?.tools as Array<{ name: string; inputSchema: { properties: Record<string, unknown> } }>;
+    const checkText = tools.find((tool) => tool.name === 'check_text')!;
+
+    expect(checkText.inputSchema.properties.text).toMatchObject({ type: 'string', maxLength: DEFAULT_MAX_TEXT_LENGTH });
+  });
+
+  it('checks a text of exactly the limit unchanged', async () => {
+    const text = textOfLength(DEFAULT_MAX_TEXT_LENGTH);
+    const fetchMock = routeFetch({ 'POST /v2/check': () => jsonResponse(emptyCheckResponse) });
+    const session = await connect(fetchMock);
+    close = session.close;
+    const response = await session.request('tools/call', { name: 'check_text', arguments: { text, language: 'en-US' } });
+
+    expect(response.result?.isError).toBeFalsy();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect((fetchMock.mock.calls[0]![1].body as URLSearchParams).get('text')).toBe(text);
+  });
+
+  it('rejects a longer text with a structured TEXT_TOO_LONG error, without contacting LanguageTool', async () => {
+    const fetchMock = routeFetch({ 'POST /v2/check': () => jsonResponse(emptyCheckResponse) });
+    const session = await connect(fetchMock);
+    close = session.close;
+    const response = await session.request('tools/call', {
+      name: 'check_text',
+      arguments: { text: textOfLength(DEFAULT_MAX_TEXT_LENGTH + 1), language: 'en-US' },
+    });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(response.result?.isError).toBe(true);
+    const [content] = response.result?.content as Array<{ text: string }>;
+    expect(JSON.parse(content!.text).error).toMatchObject({
+      code: 'TEXT_TOO_LONG',
+      endpoint: '/v2/check',
+      httpStatus: null,
+    });
+    expect(JSON.stringify(response)).not.toContain(MARKER);
   });
 });
 
