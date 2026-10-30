@@ -46,6 +46,14 @@ describe.skipIf(!enabled)('LanguageTool integration', () => {
     expect(issue?.replacements).toContain('à');
   });
 
+  it('reports offsets in UTF-16 code units after surrogate pairs', async () => {
+    const text = '😀😀 This are a test.';
+    const result = await runCheckText(client, { text, language: 'en-US' });
+    const flagged = result.issues.map((issue) => text.slice(issue.offset, issue.offset + issue.length));
+    // A code-point offset would be 3 and would not land on "This".
+    expect(flagged.some((fragment) => fragment.startsWith('This'))).toBe(true);
+  });
+
   it('reports an unknown language as an HTTP error', async () => {
     await expect(runCheckText(client, { text: 'Hello', language: 'xx-YY' })).rejects.toMatchObject({
       code: 'HTTP_ERROR',

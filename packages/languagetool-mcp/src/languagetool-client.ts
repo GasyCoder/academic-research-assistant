@@ -6,7 +6,7 @@ import {
   type RawCheckResponse,
   type RawInfo,
   type RawLanguage,
-  rawCheckResponseSchema,
+  checkResponseSchemaFor,
   rawInfoSchema,
   rawLanguagesSchema,
 } from './languagetool-schemas.js';
@@ -89,7 +89,7 @@ export class LanguageToolClient {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body,
       },
-      rawCheckResponseSchema,
+      checkResponseSchemaFor(request.text.length),
     );
   }
 
@@ -111,10 +111,10 @@ export class LanguageToolClient {
 
     const parsed = schema.safeParse(json);
     if (!parsed.success) {
-      // Paths come from our schemas and issue codes from Zod: no value of the payload is quoted.
+      // Paths come from our schemas; issue codes and custom messages are ours or Zod's: no payload value is quoted.
       const problems = parsed.error.issues
         .slice(0, 5)
-        .map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.code}`)
+        .map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.code === 'custom' ? issue.message : issue.code}`)
         .join('; ');
       throw new LanguageToolError('INVALID_RESPONSE', `LanguageTool returned an unexpected JSON structure (${problems})`, {
         endpoint,

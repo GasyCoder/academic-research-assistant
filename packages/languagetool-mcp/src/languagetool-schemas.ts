@@ -39,6 +39,9 @@ export const rawMatchSchema = z.object({
       offset: z.number().int().nonnegative(),
       length: z.number().int().nonnegative(),
     })
+    .refine((context) => context.offset + context.length <= context.text.length, {
+      message: 'range outside the context text',
+    })
     .nullish(),
   sentence: z.string().nullish(),
   rule: z.object({
@@ -71,6 +74,20 @@ export const rawCheckResponseSchema = z.object({
   }),
   matches: z.array(rawMatchSchema),
 });
+
+/**
+ * Check response whose issue ranges must lie within the submitted text.
+ * Offsets and lengths are UTF-16 code units for both LanguageTool (Java) and JavaScript.
+ */
+export function checkResponseSchemaFor(textLength: number) {
+  return rawCheckResponseSchema.superRefine((response, ctx) => {
+    response.matches.forEach((match, index) => {
+      if (match.offset + match.length > textLength) {
+        ctx.addIssue({ code: 'custom', path: ['matches', index], message: 'range outside the submitted text' });
+      }
+    });
+  });
+}
 
 export type RawSoftware = z.infer<typeof rawSoftwareSchema>;
 export type RawInfo = z.infer<typeof rawInfoSchema>;

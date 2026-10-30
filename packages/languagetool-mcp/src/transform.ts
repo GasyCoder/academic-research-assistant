@@ -22,15 +22,18 @@ export function toSupportedLanguages(raw: readonly RawLanguage[]): SupportedLang
     longCode: language.longCode ?? language.code,
   }));
 
-  const variantsByCode: Record<string, string[]> = {};
+  // Codes come from the server: a Map avoids inherited keys such as "constructor" or "__proto__".
+  const variants = new Map<string, string[]>();
   for (const language of languages) {
-    const variants = (variantsByCode[language.code] ??= []);
-    if (!variants.includes(language.longCode)) {
-      variants.push(language.longCode);
+    const longCodes = variants.get(language.code) ?? [];
+    if (!longCodes.includes(language.longCode)) {
+      longCodes.push(language.longCode);
     }
+    variants.set(language.code, longCodes);
   }
 
-  return { count: languages.length, languages, variantsByCode };
+  // Object.fromEntries defines own properties, so "__proto__" stays a plain key.
+  return { count: languages.length, languages, variantsByCode: Object.fromEntries(variants) };
 }
 
 export function toLanguageIssue(match: RawMatch): LanguageIssue {

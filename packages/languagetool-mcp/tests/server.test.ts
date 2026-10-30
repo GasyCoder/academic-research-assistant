@@ -125,6 +125,24 @@ describe('MCP server', () => {
   });
 });
 
+describe('get_supported_languages over MCP', () => {
+  it('returns unusual upstream language codes as data', async () => {
+    const languages = [
+      { name: 'A', code: '__proto__', longCode: '__proto__' },
+      { name: 'B', code: 'constructor', longCode: 'constructor-X' },
+    ];
+    const session = await connect(routeFetch({ 'GET /v2/languages': () => jsonResponse(languages) }));
+    close = session.close;
+    const response = await session.request('tools/call', { name: 'get_supported_languages', arguments: {} });
+
+    expect(response.result?.isError).toBeFalsy();
+    const [content] = response.result?.content as Array<{ text: string }>;
+    expect(JSON.parse(content!.text).variantsByCode).toEqual(
+      JSON.parse('{"__proto__": ["__proto__"], "constructor": ["constructor-X"]}'),
+    );
+  });
+});
+
 describe('unexpected exceptions', () => {
   it('does not let a tool handler leak an exception message', async () => {
     const secret = 'UNPUBLISHED-MANUSCRIPT-SENTENCE';
