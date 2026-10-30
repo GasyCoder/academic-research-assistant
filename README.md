@@ -22,6 +22,21 @@ Planned initial components:
 - Research Profile Skill
 - Citation Integrity Skill
 
+## LanguageTool MCP server
+
+`packages/languagetool-mcp` is a stdio MCP server for a locally installed LanguageTool
+instance. It exposes three tools: `health_check`, `get_supported_languages` and
+`check_text`. It returns structured diagnostics and never rewrites text.
+
+```bash
+npm install
+npm run build
+LANGUAGETOOL_BASE_URL=http://127.0.0.1:8081 node packages/languagetool-mcp/dist/index.js
+```
+
+Configuration (`LANGUAGETOOL_BASE_URL`, `LANGUAGETOOL_TIMEOUT_MS`), tool reference and
+client setup: see [packages/languagetool-mcp/README.md](packages/languagetool-mcp/README.md).
+
 ## Status
 
 Early development / architecture phase.
