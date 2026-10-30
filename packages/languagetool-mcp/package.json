@@ -2,20 +2,44 @@
   "name": "@gasycoder/languagetool-mcp",
   "version": "0.1.0",
   "private": true,
-  "description": "Generic MCP server adapter for a local LanguageTool instance.",
+  "description": "Generic MCP server (stdio) exposing a local LanguageTool instance: health check, languages, text and long-document checks.",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "languagetool",
+    "grammar",
+    "spelling"
+  ],
+  "homepage": "https://github.com/GasyCoder/academic-research-assistant/tree/main/packages/languagetool-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/GasyCoder/academic-research-assistant/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GasyCoder/academic-research-assistant.git",
+    "directory": "packages/languagetool-mcp"
+  },
   "type": "module",
-  "main": "./dist/index.js",
-  "exports": "./dist/index.js",
   "bin": {
     "languagetool-mcp": "./dist/index.js"
   },
+  "exports": {
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist/**/*.js"
+  ],
   "scripts": {
     "dev": "tsx src/index.ts",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "prebuild": "npm run clean",
     "build": "tsc -p tsconfig.json",
+    "prepack": "npm run build",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
     "test": "vitest run",
     "test:integration": "LANGUAGETOOL_INTEGRATION=1 vitest run tests/integration",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "pack:check": "tsx scripts/check-package.ts"
   },
   "engines": {
     "node": ">=20"
