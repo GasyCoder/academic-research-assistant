@@ -16,7 +16,7 @@ import {
 } from '@modelcontextprotocol/server';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { DEFAULT_MAX_TEXT_LENGTH } from '../src/languagetool-client.js';
+import { DEFAULT_MAX_RESPONSE_BYTES, DEFAULT_MAX_TEXT_LENGTH } from '../src/languagetool-client.js';
 import { emptyCheckResponse, infoResponse, languagesResponse } from './fixtures/languagetool-responses.js';
 import { type TestHttpServer, startHttpServer } from './http-server.js';
 
@@ -57,6 +57,19 @@ function startFakeLanguageTool(): Promise<TestHttpServer> {
       if (text.includes(MARKER)) {
         response.writeHead(500, { 'Content-Type': 'text/plain' });
         response.end(`Internal error while checking: ${text}`);
+      } else if (text === 'x'.repeat(DEFAULT_MAX_TEXT_LENGTH)) {
+        const body = {
+          ...emptyCheckResponse,
+          matches: Array.from({ length: 22_000 }, (_, index) => ({
+            message: MANUSCRIPT,
+            offset: index * 2,
+            length: 1,
+            replacements: [{ value: 'a' }],
+            rule: { id: 'SPELLING' },
+          })),
+        };
+        expect(Buffer.byteLength(JSON.stringify(body))).toBeLessThan(DEFAULT_MAX_RESPONSE_BYTES);
+        json(body);
       } else {
         json(emptyCheckResponse);
       }
@@ -215,6 +228,18 @@ describe('production stdio server (dist/index.js)', () => {
     expect(result.isError).toBe(true);
     expect(JSON.parse(result.content[0]!.text).error).toMatchObject({ code: 'TEXT_TOO_LONG', httpStatus: null });
     expect(languageTool.requests.length).toBe(languageToolCalls);
+  });
+
+  it('returns a small error for oversized MCP output and keeps serving the connection', async () => {
+    const calls = languageTool.requests.length;
+    const result = await session.callTool('check_text', { text: 'x'.repeat(DEFAULT_MAX_TEXT_LENGTH), language: 'en-US' });
+    expect(result.isError).toBe(true);
+    expect(result.structuredContent).toBeUndefined();
+    expect(JSON.parse(result.content[0]!.text).error).toMatchObject({ code: 'INVALID_RESPONSE', endpoint: null, httpStatus: null });
+    expect(result.content[0]!.text).toContain('MCP result limit');
+    expect(languageTool.requests.length).toBe(calls + 1);
+    expect((await session.callTool('health_check', {})).structuredContent).toMatchObject({ status: 'ok' });
+    expect((await session.callTool('check_text', { text: 'A short sentence.', language: 'en-US' })).isError).toBeFalsy();
   });
 
   it('writes only MCP messages to stdout and never the manuscript to stdout or stderr', () => {

@@ -94,6 +94,11 @@ so `health_check` reports `unavailable` until LanguageTool is ready.
   of unexpected exceptions is never forwarded.
 - Response bodies larger than 8 MiB (`DEFAULT_MAX_RESPONSE_BYTES`) are rejected
   while streaming, with an `INVALID_RESPONSE` error.
+- Tool results larger than 8 MiB (`MAX_MCP_RESULT_BYTES`), including both `content`
+  and `structuredContent` and their JSON escaping, are replaced by a small
+  `INVALID_RESPONSE` error before transmission. Diagnostics are never silently
+  truncated. This leaves room for protocol metadata under the SDK's default
+  10 MiB stdio receive buffer. The connection remains usable for a shorter check.
 - Issue ranges outside the submitted text, or context ranges outside their context
   text, are rejected as `INVALID_RESPONSE`.
 - `check_text` accepts at most 50,000 characters (`DEFAULT_MAX_TEXT_LENGTH`, see below).
@@ -171,7 +176,9 @@ Codes: `TIMEOUT`, `UNREACHABLE`, `HTTP_ERROR` (e.g. unknown language → 400, or
 redirect), `INVALID_RESPONSE` (invalid, incomplete, inconsistent or oversized
 response), `TEXT_TOO_LONG` (the text exceeds the length limit; nothing was sent, and
 the message gives the text's length and the limit, never its content), `INTERNAL_ERROR`.
-`httpStatus` is non-null whenever LanguageTool sent response headers.
+For HTTP failures, `httpStatus` is non-null whenever LanguageTool sent response
+headers. A local MCP result-size rejection has `endpoint: null` and
+`httpStatus: null`, since it describes the tool output rather than an HTTP failure.
 
 Arguments that do not match the input schema (blank text, malformed language code,
 unknown `level`) are rejected by the MCP SDK before the tool runs, with a plain-text
