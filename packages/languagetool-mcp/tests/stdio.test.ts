@@ -32,6 +32,11 @@ const entryPoint = join(packageDir, 'dist', 'index.js');
 
 const MANUSCRIPT = 'Confidential draft: protein KX-9 binds receptor R7 with nanomolar affinity.';
 const MARKER = 'KX-9';
+const BUDGET_MESSAGES = [
+  'm'.repeat(3_000),
+  'é漢😀'.repeat(600),
+  '"\\\n\u0000\u2028\u2029\ud800'.repeat(200),
+];
 
 type Response = { id: number; result?: Record<string, unknown>; error?: { code: number; message: string } };
 type ToolResult = { isError?: boolean; content: Array<{ type: string; text: string }>; structuredContent?: unknown };
@@ -80,6 +85,9 @@ function startFakeLanguageTool(): Promise<TestHttpServer> {
       if (text.includes(MARKER)) {
         response.writeHead(500, { 'Content-Type': 'text/plain' });
         response.end(`Internal error while checking: ${text}`);
+      } else if (text.includes('BADJSON')) {
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(`invalid JSON ${MANUSCRIPT}`);
       } else if (text === 'x'.repeat(DEFAULT_MAX_TEXT_LENGTH)) {
         const body = {
           ...emptyCheckResponse,
@@ -95,7 +103,13 @@ function startFakeLanguageTool(): Promise<TestHttpServer> {
         json(body);
       } else {
         const language = new URLSearchParams(request.body).get('language') ?? 'en-US';
-        json(fakeCheckResponse(text, language, text.includes('BIGISSUES') ? { messageLength: 3_000 } : {}));
+        const body = fakeCheckResponse(text, language, text.includes('BIGISSUES') ? { messageLength: 3_000 } : {});
+        const budgetCase = /BUDGET([0-2])/.exec(text);
+        if (budgetCase) {
+          for (const match of body.matches) match.message = BUDGET_MESSAGES[Number(budgetCase[1])]!;
+          expect(Buffer.byteLength(JSON.stringify(body))).toBeLessThan(DEFAULT_MAX_RESPONSE_BYTES);
+        }
+        json(body);
       }
     } else {
       response.writeHead(404);
@@ -294,13 +308,14 @@ describe('production stdio server (dist/index.js)', () => {
 
   it('returns a partial document result without the content of the failed chunk', async () => {
     // The chunk holding MARKER gets an HTTP 500 echoing it; the remaining chunks are skipped.
-    const text = longDocument(1_800, { 1_400: MANUSCRIPT });
+    const text = longDocument(2_100, { 1_200: MANUSCRIPT });
     const result = await session.callTool('check_document', { text, language: 'en-US' });
 
     expect(result.isError).toBeFalsy();
     const content = result.structuredContent as { complete: boolean; failedRanges: Array<{ code: string; start: number; end: number }> };
     expect(content.complete).toBe(false);
     expect(content.failedRanges[0]).toMatchObject({ code: 'HTTP_ERROR' });
+    expect(content.failedRanges.length).toBeGreaterThan(1);
     expect(content.failedRanges.slice(1).every((range) => range.code === 'SKIPPED')).toBe(true);
     expect(content.failedRanges[0]!.start).toBeLessThan(text.indexOf(MARKER));
     expect(JSON.stringify(result)).not.toContain(MARKER);
@@ -344,10 +359,11 @@ describe('production stdio server (dist/index.js)', () => {
   });
 });
 
-describe('official MCP client on protocol revision 2026-07-28 (dist/index.js)', () => {
+describe.each(['2025-11-25', '2026-07-28'] as const)('official MCP client on protocol revision %s (dist/index.js)', (revision) => {
   let languageTool: TestHttpServer;
   let client: Client;
   let stderr = '';
+  const wireMessages: Response[] = [];
 
   beforeAll(async () => {
     languageTool = await startFakeLanguageTool();
@@ -360,7 +376,19 @@ describe('official MCP client on protocol revision 2026-07-28 (dist/index.js)', 
     transport.stderr?.on('data', (chunk: Buffer) => {
       stderr += chunk.toString('utf8');
     });
-    client = new Client({ name: 'modern-test', version: '0' }, { versionNegotiation: { mode: { pin: '2026-07-28' } } });
+    const start = transport.start.bind(transport);
+    transport.start = async () => {
+      const receive = transport.onmessage;
+      transport.onmessage = (message) => {
+        // Observe the SDK's received wire envelope before client normalization.
+        wireMessages.push(message as unknown as Response);
+        receive?.(message);
+      };
+      await start();
+    };
+    client = new Client({ name: 'audit-test', version: '0' }, {
+      versionNegotiation: { mode: revision === '2025-11-25' ? 'legacy' : { pin: revision } },
+    });
     await client.connect(transport);
   }, 30_000);
 
@@ -369,9 +397,9 @@ describe('official MCP client on protocol revision 2026-07-28 (dist/index.js)', 
     await languageTool?.close();
   });
 
-  it('negotiates the 2026-07-28 revision and lists the four tools', async () => {
-    expect(client.getNegotiatedProtocolVersion()).toBe('2026-07-28');
-    expect(client.getProtocolEra()).toBe('modern');
+  it('negotiates the requested revision and lists the four tools', async () => {
+    expect(client.getNegotiatedProtocolVersion()).toBe(revision);
+    expect(client.getProtocolEra()).toBe(revision === '2025-11-25' ? 'legacy' : 'modern');
     const { tools } = await client.listTools();
     expect(tools.map((tool) => tool.name).sort()).toEqual([
       'check_document',
@@ -415,11 +443,63 @@ describe('official MCP client on protocol revision 2026-07-28 (dist/index.js)', 
   it('keeps the manuscript out of results and stderr when a chunk fails', async () => {
     const result = await client.callTool({
       name: 'check_document',
-      arguments: { text: longDocument(1_800, { 1_400: MANUSCRIPT }), language: 'en-US' },
+      arguments: { text: longDocument(2_100, { 1_200: MANUSCRIPT }), language: 'en-US' },
     });
 
     expect(result.structuredContent).toMatchObject({ complete: false });
+    const data = result.structuredContent as { failedRanges: Array<{ code: string }> };
+    expect(data.failedRanges.map((range) => range.code)).toEqual(['HTTP_ERROR', 'SKIPPED']);
     expect(JSON.stringify(result)).not.toContain(MARKER);
     expect(stderr).not.toContain(MARKER);
+    expect((await client.callTool({ name: 'check_document', arguments: { text: 'A teh.', language: 'en-US' } })).structuredContent)
+      .toMatchObject({ complete: true, issueCount: 1 });
+  });
+
+  it('stops an HTTP server returning invalid JSON after two requests and keeps serving', async () => {
+    const calls = languageTool.requests.length;
+    const result = await client.callTool({
+      name: 'check_document', arguments: { text: 'BADJSON '.repeat(12_000), language: 'en-US' },
+    });
+    expect(result.isError).toBe(true);
+    const content = result.content as Array<{ text: string }>;
+    expect(JSON.parse(content[0]!.text).error).toMatchObject({ code: 'INVALID_RESPONSE' });
+    expect(languageTool.requests.length - calls).toBe(2);
+    expect(JSON.stringify(result)).not.toContain(MARKER);
+    expect(stderr).not.toContain(MARKER);
+    expect((await client.callTool({ name: 'check_document', arguments: { text: 'A teh.', language: 'en-US' } })).structuredContent)
+      .toMatchObject({ complete: true, issueCount: 1 });
+  });
+
+  it.each(BUDGET_MESSAGES.map((_, index) => index))('bounds actual SDK output for JSON/UTF-8 case %i and keeps serving', async (index) => {
+    const calls = languageTool.requests.length;
+    const result = await client.callTool({
+      name: 'check_document',
+      arguments: { text: `BUDGET${index}. ${'A sentence with one teh in it, and more words. '.repeat(2_100)}`, language: 'en-US' },
+    });
+    const data = result.structuredContent as {
+      truncated: boolean; truncatedAt: number; issueCount: number; processedChunkCount: number;
+      issues: Array<{ message: string; offset: number }>;
+    };
+    expect(data).toMatchObject({ truncated: true, complete: false });
+    expect(data.issues.every((issue) => issue.message === BUDGET_MESSAGES[index])).toBe(true);
+    expect(data.issueCount).toBe(data.issues.length);
+    expect(data.issues.at(-1)!.offset).toBeLessThan(data.truncatedAt);
+    expect(languageTool.requests.length - calls).toBe(data.processedChunkCount);
+    const wire = wireMessages.at(-1)!;
+    expect(wire.result?.structuredContent).toEqual(data);
+    const content = wire.result?.content as Array<{ text: string }>;
+    expect(JSON.parse(content[0]!.text)).toEqual(data);
+    const issueCost = data.issues.reduce((sum, issue) => {
+      const json = JSON.stringify(issue);
+      return sum + Buffer.byteLength(json) + Buffer.byteLength(JSON.stringify(json));
+    }, 0);
+    expect(issueCost).toBeLessThanOrEqual(MAX_MCP_RESULT_BYTES / 2);
+    // Object-shaped results are unchanged by both SDK codecs; serialize the received
+    // envelope with the same official serializer used by the server's stdio writer.
+    const bytes = Buffer.byteLength(serializeMessage(wire as unknown as JSONRPCMessage));
+    expect(bytes).toBeLessThan(MAX_MCP_RESULT_BYTES);
+    expect(bytes).toBeLessThan(issueCost + 10_000);
+    expect((await client.callTool({ name: 'check_document', arguments: { text: 'A teh.', language: 'en-US' } })).structuredContent)
+      .toMatchObject({ complete: true, truncated: false, issueCount: 1 });
   });
 });
