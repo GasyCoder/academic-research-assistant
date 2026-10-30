@@ -37,15 +37,33 @@ diagnostics are written to stderr and never include the analysed text.
 Invalid values stop the server at startup with a message on stderr. No secret is required.
 Text is sent to the configured URL: use a local instance for unpublished manuscripts.
 
+## Privacy and robustness
+
+- HTTP redirects are never followed, so the text cannot be forwarded to another
+  origin; a 3xx answer is reported as an `HTTP_ERROR`.
+- Error messages are built from technical data only (code, HTTP status, endpoint,
+  category). Bodies of HTTP error responses are discarded unread, and the message
+  of unexpected exceptions is never forwarded.
+- Response bodies larger than 8 MiB (`DEFAULT_MAX_RESPONSE_BYTES`) are rejected
+  while streaming, with an `INVALID_RESPONSE` error.
+- Issue ranges outside the submitted text, or context ranges outside their context
+  text, are rejected as `INVALID_RESPONSE`.
+
 ## Tools
 
 ### `health_check`
 
 No input. Calls `/v2/healthcheck`, then `/v2/info` for the version. Sends no text.
 
-Returns `status` (`ok` | `unhealthy` | `unavailable`), `reachable`, `baseUrl`,
-`software` (name, version, build date, or `null`) and `error` (or `null`).
-An offline server is reported in the result rather than as a tool error.
+Returns `status`, `reachable`, `baseUrl`, `software` (name, version, build date,
+or `null`) and `error` (or `null`). An offline server is reported in the result
+rather than as a tool error.
+
+| `status`      | `reachable` | Meaning                                                                 |
+| ------------- | ----------- | ----------------------------------------------------------------------- |
+| `ok`          | `true`      | `/v2/healthcheck` answered successfully.                                 |
+| `unhealthy`   | `true`      | LanguageTool sent an HTTP response, but it was an error, invalid, incomplete or too slow. |
+| `unavailable` | `false`     | No HTTP response: connection refused, DNS failure, or timeout before any answer. |
 
 ### `get_supported_languages`
 
@@ -78,8 +96,10 @@ return an MCP error result (`isError: true`) whose text is JSON:
 { "error": { "code": "UNREACHABLE", "message": "LanguageTool is unreachable at http://127.0.0.1:8081 (ECONNREFUSED)", "endpoint": "/v2/check", "httpStatus": null } }
 ```
 
-Codes: `TIMEOUT`, `UNREACHABLE`, `HTTP_ERROR` (e.g. unknown language → 400),
-`INVALID_RESPONSE` (invalid or incomplete JSON), `INTERNAL_ERROR`.
+Codes: `TIMEOUT`, `UNREACHABLE`, `HTTP_ERROR` (e.g. unknown language → 400, or a
+redirect), `INVALID_RESPONSE` (invalid, incomplete, inconsistent or oversized
+response), `INTERNAL_ERROR`. `httpStatus` is non-null whenever LanguageTool sent
+response headers.
 
 ## Minimal usage
 
@@ -132,10 +152,16 @@ Example call and (abridged) result:
 
 ## Tests
 
+From the repository root:
+
 ```bash
-npm test                    # unit tests, no LanguageTool server needed
+npm test                    # unit and stdio tests, no LanguageTool server needed
 npm run test:integration    # optional, against LANGUAGETOOL_BASE_URL
 ```
+
+`npm test` builds the package and runs `dist/index.js` as a subprocess. The same
+scripts work from `packages/languagetool-mcp/`, or from the root with
+`-w @gasycoder/languagetool-mcp`.
 
 ## Source layout
 
