@@ -32,10 +32,58 @@ diagnostics are written to stderr and never include the analysed text.
 | Variable                  | Default                 | Description                                        |
 | ------------------------- | ----------------------- | -------------------------------------------------- |
 | `LANGUAGETOOL_BASE_URL`   | `http://127.0.0.1:8081` | LanguageTool server URL (`http` or `https`).       |
-| `LANGUAGETOOL_TIMEOUT_MS` | `10000`                 | Per-request timeout in milliseconds (1–300000).    |
+| `LANGUAGETOOL_TIMEOUT_MS` | `30000`                 | Per-request timeout in milliseconds (1–300000).    |
 
 Invalid values stop the server at startup with a message on stderr. No secret is required.
 Text is sent to the configured URL: use a local instance for unpublished manuscripts.
+
+The 30 s default covers loading a language on its first check (see below) plus a text at the
+input limit, with about 2× headroom. It also stays below the 60 s default request timeout of
+MCP SDK clients, so the caller gets this server's structured `TIMEOUT` rather than a generic
+client-side timeout. Raise it on slow hardware; if you raise it above 60 s, raise the
+client's tool-call timeout too.
+
+## Cold start and readiness
+
+LanguageTool loads each language lazily, on the first `/v2/check` that uses it. Measured
+with LanguageTool 6.9-SNAPSHOT on a 12-core machine:
+
+| Request                                  | Duration   |
+| ---------------------------------------- | ---------- |
+| `/v2/healthcheck`, 1–2 s after JVM start | < 10 ms    |
+| first check in `en-US`                   | ~4 s       |
+| first check in `fr`                      | 6–10 s     |
+| first check in `de-DE`                   | ~9.5 s     |
+| next short checks in the same language   | 0.01–1.5 s |
+| 50,000 characters of French, warm        | ~4 s       |
+
+`/v2/healthcheck` stays instant while a language is loading, so `health_check` reports
+*liveness*, not readiness: `ok` does not mean that every language is loaded.
+
+| `health_check` | `check_text`                | Meaning                                                                                               |
+| -------------- | --------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `ok`           | succeeds, first call slower | Normal cold start.                                                                                    |
+| `ok`           | `TIMEOUT`                   | LanguageTool is up, but the check exceeded the timeout: cold language on slow hardware, or long text. |
+| `unavailable`  | `UNREACHABLE` or `TIMEOUT`  | LanguageTool is not running, or not answering at all.                                                 |
+| `unhealthy`    | any error                   | LanguageTool answers, but with errors or invalid data.                                                |
+
+The server never retries a request on its own. A timeout does not tell a language being
+loaded from an overloaded or stuck server, and LanguageTool keeps processing a request after
+the client gives up (the language keeps loading in the background). A retry would therefore
+send the manuscript again and add to the load. After a cold-start `TIMEOUT`, a later call in the
+same language is usually fast.
+
+To remove the cold start altogether, let LanguageTool load its languages at startup by adding
+to its `server.properties`:
+
+```properties
+pipelineCaching=true
+pipelinePrewarming=true
+```
+
+In the measurement above this made every first check take about 1 s, at the cost of a slower
+start (about 17 s instead of 2 s) and more memory. The port only opens once prewarming is done,
+so `health_check` reports `unavailable` until LanguageTool is ready.
 
 ## Privacy and robustness
 
