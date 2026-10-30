@@ -1,0 +1,182 @@
+import type { z } from 'zod';
+
+import type { LanguageToolConfig } from './config.js';
+import { LanguageToolError } from './errors.js';
+import {
+  type RawCheckResponse,
+  type RawInfo,
+  type RawLanguage,
+  rawCheckResponseSchema,
+  rawInfoSchema,
+  rawLanguagesSchema,
+} from './languagetool-schemas.js';
+
+export type FetchLike = (input: string, init: RequestInit) => Promise<Response>;
+
+export interface LanguageToolClientOptions extends LanguageToolConfig {
+  /** HTTP implementation; defaults to the global fetch. Injected in tests. */
+  fetch?: FetchLike;
+}
+
+export interface CheckRequest {
+  text: string;
+  /** LanguageTool language code (e.g. "en-US", "fr") or "auto". */
+  language: string;
+  level?: 'default' | 'picky';
+  disabledRules?: readonly string[];
+  disabledCategories?: readonly string[];
+}
+
+/** Maximum number of characters of a LanguageTool error body kept in error messages. */
+const MAX_ERROR_BODY_LENGTH = 300;
+
+/**
+ * Thin HTTP client for the LanguageTool v2 API.
+ * Every failure is reported as a LanguageToolError; no method rewrites or logs the text.
+ */
+export class LanguageToolClient {
+  readonly baseUrl: string;
+  readonly timeoutMs: number;
+  private readonly fetchImpl: FetchLike;
+
+  constructor(options: LanguageToolClientOptions) {
+    this.baseUrl = options.baseUrl;
+    this.timeoutMs = options.timeoutMs;
+    this.fetchImpl = options.fetch ?? ((input, init) => fetch(input, init));
+  }
+
+  /** Resolves when GET /v2/healthcheck answers with a 2xx status. */
+  async healthcheck(): Promise<void> {
+    const endpoint = '/v2/healthcheck';
+    const signal = AbortSignal.timeout(this.timeoutMs);
+    const response = await this.request(endpoint, { method: 'GET' }, signal);
+    await this.readBody(response, endpoint, signal);
+  }
+
+  /** Server metadata (name, version, build date). Sends no text. */
+  async getInfo(): Promise<RawInfo> {
+    return this.requestJson('/v2/info', { method: 'GET' }, rawInfoSchema);
+  }
+
+  async getLanguages(): Promise<RawLanguage[]> {
+    return this.requestJson('/v2/languages', { method: 'GET' }, rawLanguagesSchema);
+  }
+
+  async check(request: CheckRequest): Promise<RawCheckResponse> {
+    const body = new URLSearchParams({ text: request.text, language: request.language });
+    if (request.level !== undefined) {
+      body.set('level', request.level);
+    }
+    if (request.disabledRules !== undefined && request.disabledRules.length > 0) {
+      body.set('disabledRules', request.disabledRules.join(','));
+    }
+    if (request.disabledCategories !== undefined && request.disabledCategories.length > 0) {
+      body.set('disabledCategories', request.disabledCategories.join(','));
+    }
+    return this.requestJson(
+      '/v2/check',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body,
+      },
+      rawCheckResponseSchema,
+    );
+  }
+
+  private async requestJson<T>(endpoint: string, init: RequestInit, schema: z.ZodType<T>): Promise<T> {
+    const signal = AbortSignal.timeout(this.timeoutMs);
+    const response = await this.request(endpoint, init, signal);
+    const body = await this.readBody(response, endpoint, signal);
+
+    let json: unknown;
+    try {
+      json = JSON.parse(body);
+    } catch (cause) {
+      throw new LanguageToolError('INVALID_RESPONSE', 'LanguageTool returned a body that is not valid JSON', {
+        endpoint,
+        httpStatus: response.status,
+        cause,
+      });
+    }
+
+    const parsed = schema.safeParse(json);
+    if (!parsed.success) {
+      const problems = parsed.error.issues
+        .slice(0, 5)
+        .map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`)
+        .join('; ');
+      throw new LanguageToolError('INVALID_RESPONSE', `LanguageTool returned an unexpected JSON structure (${problems})`, {
+        endpoint,
+        httpStatus: response.status,
+      });
+    }
+    return parsed.data;
+  }
+
+  private async request(endpoint: string, init: RequestInit, signal: AbortSignal): Promise<Response> {
+    const headers = new Headers(init.headers);
+    headers.set('Accept', 'application/json');
+    let response: Response;
+    try {
+      response = await this.fetchImpl(`${this.baseUrl}${endpoint}`, { ...init, headers, signal });
+    } catch (error) {
+      throw this.toTransportError(error, endpoint);
+    }
+
+    if (!response.ok) {
+      const detail = await this.readBody(response, endpoint, signal).catch(() => '');
+      const summary = detail.trim().slice(0, MAX_ERROR_BODY_LENGTH);
+      throw new LanguageToolError(
+        'HTTP_ERROR',
+        `LanguageTool answered HTTP ${response.status}${summary ? `: ${summary}` : ''}`,
+        { endpoint, httpStatus: response.status },
+      );
+    }
+    return response;
+  }
+
+  private async readBody(response: Response, endpoint: string, signal: AbortSignal): Promise<string> {
+    try {
+      return await response.text();
+    } catch (error) {
+      if (signal.aborted) {
+        throw this.toTransportError(error, endpoint);
+      }
+      throw new LanguageToolError('INVALID_RESPONSE', 'Failed to read the LanguageTool response body', {
+        endpoint,
+        httpStatus: response.status,
+        cause: error,
+      });
+    }
+  }
+
+  private toTransportError(error: unknown, endpoint: string): LanguageToolError {
+    if (isTimeoutError(error)) {
+      return new LanguageToolError(
+        'TIMEOUT',
+        `LanguageTool did not answer within ${this.timeoutMs} ms (${this.baseUrl})`,
+        { endpoint, cause: error },
+      );
+    }
+    const code = networkErrorCode(error);
+    return new LanguageToolError(
+      'UNREACHABLE',
+      `LanguageTool is unreachable at ${this.baseUrl}${code ? ` (${code})` : ''}`,
+      { endpoint, cause: error },
+    );
+  }
+}
+
+function isTimeoutError(error: unknown): boolean {
+  return error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError');
+}
+
+/** Extracts a system error code such as ECONNREFUSED from undici's "fetch failed" TypeError. */
+function networkErrorCode(error: unknown): string | undefined {
+  const cause = error instanceof Error ? error.cause : undefined;
+  if (typeof cause === 'object' && cause !== null && 'code' in cause && typeof cause.code === 'string') {
+    return cause.code;
+  }
+  return undefined;
+}
