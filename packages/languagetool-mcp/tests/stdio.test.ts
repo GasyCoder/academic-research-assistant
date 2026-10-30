@@ -362,12 +362,15 @@ describe('production stdio server (dist/index.js)', () => {
 describe.each(['2025-11-25', '2026-07-28'] as const)('official MCP client on protocol revision %s (dist/index.js)', (revision) => {
   let languageTool: TestHttpServer;
   let client: Client;
+  let transport: StdioClientTransport;
   let stderr = '';
+  let stdout = '';
   const wireMessages: Response[] = [];
+  const transportErrors: Error[] = [];
 
   beforeAll(async () => {
     languageTool = await startFakeLanguageTool();
-    const transport = new StdioClientTransport({
+    transport = new StdioClientTransport({
       command: process.execPath,
       args: [entryPoint],
       env: { ...process.env, LANGUAGETOOL_BASE_URL: languageTool.url, LANGUAGETOOL_TIMEOUT_MS: '3000' },
@@ -384,7 +387,19 @@ describe.each(['2025-11-25', '2026-07-28'] as const)('official MCP client on pro
         wireMessages.push(message as unknown as Response);
         receive?.(message);
       };
+      // JSON lines that are not MCP messages surface here; the SDK skips non-JSON lines silently.
+      const fail = transport.onerror;
+      transport.onerror = (error) => {
+        transportErrors.push(error);
+        fail?.(error);
+      };
       await start();
+      // Raw stdout, to catch output the SDK would skip. The field is private to the pinned SDK version.
+      const child = (transport as unknown as { _process?: { stdout?: NodeJS.ReadableStream } })._process;
+      expect(child?.stdout).toBeDefined();
+      child!.stdout!.on('data', (chunk: Buffer) => {
+        stdout += chunk.toString('utf8');
+      });
     };
     client = new Client({ name: 'audit-test', version: '0' }, {
       versionNegotiation: { mode: revision === '2025-11-25' ? 'legacy' : { pin: revision } },
@@ -501,5 +516,22 @@ describe.each(['2025-11-25', '2026-07-28'] as const)('official MCP client on pro
     expect(bytes).toBeLessThan(issueCost + 10_000);
     expect((await client.callTool({ name: 'check_document', arguments: { text: 'A teh.', language: 'en-US' } })).structuredContent)
       .toMatchObject({ complete: true, truncated: false, issueCount: 1 });
+  });
+
+  it('writes only MCP messages to stdout and exits on its own when the client closes', async () => {
+    const pid = transport.pid!;
+    expect(transportErrors).toEqual([]);
+    const lines = stdout.split('\n').filter((line) => line !== '');
+    expect(lines.length).toBeGreaterThan(0);
+    for (const line of lines) {
+      expect(JSON.parse(line)).toMatchObject({ jsonrpc: '2.0' });
+    }
+    expect(stdout).not.toContain(MARKER);
+    const start = performance.now();
+    await client.close();
+    // close() ends stdin, then waits up to 2 s for the process before sending SIGTERM.
+    expect(performance.now() - start).toBeLessThan(1_500);
+    expect(() => process.kill(pid, 0)).toThrow();
+    expect(stderr).not.toContain(MARKER);
   });
 });
