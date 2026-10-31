@@ -21,6 +21,8 @@ from the user or from a research profile, never from this Skill.
 Review the presentation and internal logic of the supplied passage, not the validity of the
 research design or a full scientific peer review. Flag methodological ambiguities as writing
 questions; do not perform statistical analysis, bibliographic validation or profile management.
+Alignment between question, methods, results and conclusions across sections belongs to the
+[Scientific Review Skill](../scientific-review/SKILL.md).
 
 Every reported problem is one of:
 
