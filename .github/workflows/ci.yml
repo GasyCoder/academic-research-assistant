@@ -41,6 +41,9 @@ jobs:
         run: |
           node -p "[process.version, 'ICU ' + process.versions.icu, 'Intl.Segmenter ' + typeof Intl.Segmenter].join(', ')"
 
+      - name: Validate skills
+        run: npm run validate:skills
+
       - name: Install
         run: npm ci
 
