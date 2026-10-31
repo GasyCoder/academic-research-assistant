@@ -22,6 +22,7 @@ Initial components:
 - Scientific Review Skill (available, see below)
 - Research Profile Skill (available, see below)
 - Citation Integrity Skill (available, see below)
+- Document Formats library (Markdown, LaTeX and DOCX inspection; see below)
 
 ## LanguageTool MCP server
 
@@ -144,6 +145,15 @@ Research Profile's declared project context. Select one explicitly with
 `discipline.profileId` or a current instruction; absent or unavailable guidance uses general
 Skill conventions. Explicit instructions, venue/document requirements and the Research
 Profile take precedence. Profiles establish no scientific-validity verdict or mandatory method.
+
+## Document Formats
+
+[`packages/document-formats`](docs/document-formats.md) provides local structured reading of
+Markdown, conservative LaTeX inspection and read-only DOCX extraction. It retains section
+and passage locations, protected content and coverage limits; prose segments map LanguageTool
+diagnostics back to their source. It returns findings locations and replacement proposals,
+without editing originals, compiling TeX, rendering documents or promising DOCX write-back.
+The ordinary workspace tests, typecheck and build include this library.
 
 ## Status
 

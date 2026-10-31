@@ -55,3 +55,14 @@ Profile > Discipline Profile > generic Skill conventions. Never-invent, evidence
 reasoning, meaning preservation and absence ≠ nonexistence remain overriding invariants.
 Discipline guidance is conditional context, never evidence or a scientific-validity rule.
 Selection, schema and validation: [discipline-profiles.md](discipline-profiles.md).
+
+### Document Formats
+
+`packages/document-formats` reads supplied Markdown, LaTeX and DOCX into a minimal structured
+model: units, section hierarchy, protected regions, prose segments, source locations and
+coverage. It contains no academic judgement or profile-specific parsing and adds no MCP
+endpoint. Skills consume this structure; only eligible prose segments may be submitted to
+LanguageTool, with UTF-16 findings mapped to their original segment and source unit.
+The API never writes files; DOCX is read-only and replacements are unapplied proposals.
+Research and Discipline Profiles remain contextual inputs to Skills, never parser policy
+or documents to update. Capabilities and limits: [document-formats.md](document-formats.md).
