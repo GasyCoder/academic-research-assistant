@@ -29,13 +29,18 @@ data and no secrets.
    default as if it were a fact: if the citation style is unknown, do not write APA.
 3. **Minimal changes.** An update touches only the fields the user's statement concerns.
    "Use APA 7 for this project" sets `citationStyle`, nothing else.
-4. **Nothing silently.** Show the proposed change (the YAML lines before and after) and write
-   the file only after the user agrees, and only if the environment allows writing files.
-5. **Valid before written.** Check the result with `npm run validate:profiles -- <file>` when
-   it can run; otherwise check it against the format reference. Never write an invalid profile.
+4. **Nothing silently.** Show the change (the YAML lines before and after). An explicit
+   request to create or update an identified profile authorises that specific write; do not
+   ask for the same permission again. A casual preference or an ambiguous target is not a
+   write request: propose the change and clarify before persisting it. Respect file permissions.
+5. **Valid before written.** Validate the candidate in memory with `validateProfile` from
+   `scripts/validate-profiles.mjs`, or validate a temporary candidate outside the versioned
+   tree with `npm run validate:profiles -- <candidate>`, before replacing the target file.
+   If the validator cannot run, check against the format reference and disclose that limitation.
 6. **No secrets or unneeded personal data.** Refuse to store passwords, tokens, API keys,
    credentials, health data or personal details. Say why, and suggest keeping them out of the
-   profile. The validator rejects secret-like keys and values.
+   profile. Never repeat a supplied secret in the answer, diff or candidate file. The validator
+   checks credential-like keys and known value formats; it is not a general privacy detector.
 
 ## Creating a profile
 
@@ -63,10 +68,11 @@ When new information contradicts the profile (e.g. the profile says `en-US` and 
 the journal requires British English):
 
 1. state both values and where each comes from;
-2. ask whether the new value applies to the whole project or only to one document or
-   submission;
-3. propose the change; until the user decides, keep the old value in the file and follow the
-   current explicit instruction for the task at hand.
+2. use the stated scope (project, document, section or current task); ask only if it is
+   unclear. A document- or section-specific instruction does not change the global profile;
+3. for a global update, show the diff and apply the write-authorisation rule above. Keep the
+   stored values while scope or consent remains unresolved; follow the explicit local
+   instruction for the task without persisting that exception.
 
 ## Precedence
 
@@ -87,7 +93,7 @@ design valid or allow adding methods or statistics.
 
 | Field | Effect on the academic Skills |
 | --- | --- |
-| `language` | Language and variant of the review and of LanguageTool checks; availability is still checked with `get_supported_languages` |
+| `language` | Writing language and variant for the document and LanguageTool checks; explanations still follow the user's language; availability is checked with `get_supported_languages` |
 | `document`, `sections` | Expected structure, e.g. whether Results and Discussion are combined |
 | `voice` | Person and voice kept or suggested in revisions |
 | `citationStyle` | Context for comments on citation form; no formatting engine and no reference checks |
