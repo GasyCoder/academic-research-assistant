@@ -50,6 +50,13 @@ verified from the provided material."
    Never guess missing entries or claim exhaustive extraction from a complex document.
 2. **Inventory citations and bibliography separately**, retaining visible forms and locations
    using the fields below. Mark unknown fields "not visible"; no mandatory JSON format.
+   With structured file input, use the [Document Formats contract](../../docs/document-formats.md).
+   Inspect the relevant raw units, notes and visible marker metadata, not just prose segments
+   that deliberately exclude citation syntax. Preserve source paths, reference numbers,
+   Pandoc/LaTeX keys, DOCX field markers and note roles; format detection is not citation
+   verification. Protected opaque environments, missing includes and uninspected parts limit
+   the inventory. Never invent entries or claim complete reference coverage from extraction
+   omissions. Return located findings without rewriting keys, fields or the document.
 3. **Match candidates** using the supplied author/year/suffix or reference numbers. Read
    [references/integrity-framework.md](references/integrity-framework.md) for matching,
    duplicates, metadata completeness, DOI/URL and note-based styles. Preserve ambiguity;

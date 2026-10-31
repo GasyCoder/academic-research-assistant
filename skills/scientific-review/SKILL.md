@@ -74,6 +74,12 @@ Infer the mode from the request; adapt depth to the text provided.
 1. **Establish coverage.** List the sections provided and those not provided, and whether a
    research profile is used. A link whose required information is not provided cannot be
    assessed; use the document's own headings rather than requiring named IMRaD sections.
+   For structured file input, follow the [Document Formats contract](../../docs/document-formats.md):
+   keep heading ancestry, unit ids/paths, table row/cell origin, captions and extraction
+   omissions. A prose-only segment list excludes protected content and is not a complete
+   manuscript. Review relevant units and stated coverage, without inferring unseen figures,
+   uninspected DOCX parts or included TeX files. Parsing supplies structure, never evidence
+   that a scientific claim is correct. Do not rewrite or serialize the original document.
 2. **Map the argument** with locations: question, objectives, hypotheses or claims (as stated);
    method elements; results; interpretations; conclusions; stated limitations; key numbers.
    Never create an element the text does not state.

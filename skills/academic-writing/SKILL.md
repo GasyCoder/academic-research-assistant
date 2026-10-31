@@ -64,6 +64,18 @@ Infer the mode from the request; ask only if the expected output is unclear. Def
 
 ## LanguageTool
 
+For Markdown, LaTeX or DOCX input, use the
+[Document Formats contract](../../docs/document-formats.md) when the local reader is available.
+Keep the original source, unit/section locations, coverage and protected material. Read the
+whole relevant unit for meaning, but submit only its eligible `segment.text` to LanguageTool;
+never send raw markup, math, code, citation keys, field instructions or XML as ordinary prose.
+Keep each submission's segment id and revision. Offsets are UTF-16 relative to that exact
+segment; map through `mapFinding`, not through a stripped or concatenated source string.
+Findings and replacement proposals retain the structural location and a short quotation.
+The format layer returns proposals only, with no writer or DOCX round-trip guarantee.
+Never rebuild a styled paragraph from flattened text. If the reader is unavailable or a
+region cannot be mapped, state that limitation and review manually without inventing offsets.
+
 The tools come from the LanguageTool MCP server (`packages/languagetool-mcp`). Their exact
 names depend on how the client registered the server (e.g. `mcp__languagetool__check_text`).
 
