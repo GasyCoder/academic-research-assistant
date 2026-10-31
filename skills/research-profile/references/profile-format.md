@@ -29,7 +29,7 @@ The format is defined by
 | `profileVersion` | Format version, `1`. It changes only with an incompatible format change; a future version will document its migration. |
 | `id` | Non-personal slug, e.g. `soil-survey-2026`. |
 | `project` | `title`, `topic`, `keywords`: the project, not the researcher. |
-| `discipline` | `name`, `field`, `subfield`: free text, no closed taxonomy. |
+| `discipline` | `name`, `field`, `subfield`: free text, no closed taxonomy. Optional `profileId`: explicitly selected primary generic discipline profile id; lowercase hyphenated slug, at most 64 characters. Absence selects none; unavailable ids remain valid and fall back to general conventions. |
 | `methodology` | `approaches` (one or more of `qualitative`, `quantitative`, `mixed`, `theoretical`, `computational`, `experimental`, `doctrinal`, `other`), `methods` (free text list), `notes` (required with `other`). |
 | `document` | `type` (`thesis`, `dissertation`, `article`, `conference-paper`, `report`, `proposal`, `book-chapter`, `other`), `typeNote` (required with `other`), `currentSection`. |
 | `language` | `primary` (2-3 letters, e.g. `en`, `fr`), `variant` starting with it case-insensitively (e.g. `en-GB`, `en-US-u-ca-gregory`). Basic subtag syntax only, not full BCP 47 registry validation; spelling is not normalised. No LanguageTool availability is implied. |
@@ -40,6 +40,11 @@ The format is defined by
 | `terminology` | `preferred` (`term`, `insteadOf`), `avoid`, `abbreviations` (`abbreviation`, `expansion`, each abbreviation occurs once), `protected` (expressions kept exactly). Lexical only. |
 
 ## Provenance
+
+Optional generic guidance is separate from this project's declared context. Selection,
+fallback and precedence are defined in [discipline-profiles.md](../../../docs/discipline-profiles.md).
+`profileId` is an additive optional field, so existing format-1 profiles remain valid.
+Never populate it from manuscript keywords or copy discipline guidance into project fields.
 
 Each section may carry `source`:
 

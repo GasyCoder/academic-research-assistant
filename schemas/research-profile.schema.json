@@ -36,7 +36,7 @@
       }
     },
     "discipline": {
-      "description": "Free text, e.g. a discipline, a field within it and a subfield. No closed taxonomy.",
+      "description": "Free-text discipline, field and subfield, with an optional explicitly selected generic discipline profile. No closed taxonomy.",
       "type": "object",
       "additionalProperties": false,
       "minProperties": 1,
@@ -44,6 +44,12 @@
         "name": { "$ref": "#/$defs/text" },
         "field": { "$ref": "#/$defs/text" },
         "subfield": { "$ref": "#/$defs/text" },
+        "profileId": {
+          "description": "Optional explicitly selected primary discipline profile id. Absence selects none; an unavailable id falls back to general Skill conventions, without guessing or merging profiles.",
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "maxLength": 64
+        },
         "source": { "$ref": "#/$defs/source" }
       }
     },

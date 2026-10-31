@@ -1,0 +1,23 @@
+disciplineProfileVersion: 1
+id: life-sciences
+label: Life Sciences
+description: Project-maintained generic guidance for life-science writing, adapted to the stated design and contribution rather than a universal biomedical checklist.
+aliases: [life sciences, biological sciences]
+writing:
+  - Where measurements are reported, keeping entities, units, conditions and uncertainty explicit may improve clarity.
+  - Distinguish observation and interpretation where relevant, preserving scientific names and declared technical terminology.
+structure:
+  - Empirical experimental or observational papers commonly use an IMRaD pattern, depending on the venue and method.
+  - Theoretical, methodological, synthesis and case-based work may use different structures.
+methodology:
+  - Where samples or measurements are involved, sampling, procedures and analysis descriptions may help readers interpret findings.
+  - Reproducibility details and ethics information may be relevant depending on the study design; this profile establishes no regulatory or approval requirement.
+evidence:
+  - Observations, experiments, comparative analyses, models and source syntheses may provide evidence appropriate to different questions.
+  - Consider whether interpretation retains the reported population, conditions and uncertainty; do not impose significance thresholds or sample minima.
+citations:
+  - Numeric and author-date systems may be used; supplied venue requirements and the Research Profile determine the intended style.
+  - Distinguish a cited finding from its interpretation using visible attribution, without assuming that citation presence establishes support.
+review:
+  - If a claim concerns a measured effect, are its conditions and scope visible in the supplied text?
+  - Where the manuscript states design limitations, do its conclusions preserve them?

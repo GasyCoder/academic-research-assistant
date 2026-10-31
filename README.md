@@ -11,6 +11,7 @@ The project separates:
 - **MCP tools** — deterministic technical capabilities such as linguistic analysis.
 - **Academic Skills** — contextual reasoning for scientific writing, methodology, citations, document types, and disciplines.
 - **Research Profiles** — dynamic project-specific configuration without hard-coding a research topic.
+- **Discipline Profiles** — optional generic guidance, separate from project-specific context.
 
 ## Initial components
 
@@ -84,6 +85,7 @@ Configuration, tools, limits, cold start and client setup in detail:
 ```bash
 npm run check              # what CI runs: skill and profile validation, typecheck, tests, build, npm package check
 npm run validate:profiles  # research profiles; add -- path/to/profile.yaml for a given file
+npm run validate:disciplines # shipped discipline profiles and id/alias uniqueness
 npm run test:integration   # against a real LanguageTool on LANGUAGETOOL_BASE_URL
 ```
 
@@ -133,6 +135,15 @@ and updates profiles with the user's consent.
 - Example: [`profiles/default.yaml`](profiles/default.yaml).
 - Real profiles: `profiles/local/`, ignored by Git. Never commit a real profile, and never
   store secrets or unneeded personal data in one.
+
+## Discipline Profiles
+
+Five optional [Discipline Profiles](docs/discipline-profiles.md) provide conditional writing
+and review conventions. They are generic project-maintained guidance, separate from a
+Research Profile's declared project context. Select one explicitly with
+`discipline.profileId` or a current instruction; absent or unavailable guidance uses general
+Skill conventions. Explicit instructions, venue/document requirements and the Research
+Profile take precedence. Profiles establish no scientific-validity verdict or mandatory method.
 
 ## Status
 

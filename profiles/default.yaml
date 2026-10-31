@@ -27,6 +27,9 @@ profileVersion: 1
 #   name: Name of the discipline
 #   field: Field within the discipline
 #   subfield: Subfield, if useful
+## Optional explicitly selected generic guidance; omit to select none.
+## The name/field alone does not silently select a profile.
+#   profileId: computer-science
 
 ## approaches: qualitative, quantitative, mixed, theoretical, computational,
 ## experimental, doctrinal or other (describe "other" in notes). Several are allowed.

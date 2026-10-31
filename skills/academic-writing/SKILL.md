@@ -207,10 +207,12 @@ Apply conventions from the strongest source to the weakest:
 2. explicit requirements of the venue or the document;
 3. the research profile, when one is provided or the user names its file (see the
    [Research Profile Skill](../research-profile/SKILL.md));
-4. the general conventions of this Skill.
+4. an explicitly selected optional Discipline Profile;
+5. the general conventions of this Skill.
 
-Without a profile, apply general conventions and ask when a choice matters; do not require,
-create or guess a profile. An absent field is unknown and falls back to general conventions.
+Without a selected discipline profile or declared project context, apply general conventions
+and ask when a choice matters; do not require, create or guess a profile. An absent field
+is unknown and falls back through this precedence order.
 
 With a profile, use its declared fields: language variant; document type and section
 conventions; voice; terminology (keep preferred and protected terms, flag terms to avoid and
@@ -222,3 +224,13 @@ Instructions and profiles adjust conventions. They never override Preserving mea
 invent, or the rules on data and methods. A glossary fixes wording, not facts; a declared
 methodology does not validate a design or justify adding methods or statistics. Changing the
 profile itself belongs to the Research Profile Skill.
+
+Optional [Discipline Profiles](../../docs/discipline-profiles.md#selection-and-fallback)
+supply conditional writing/structure notes only after explicit selection, including a supplied
+Research Profile's `discipline.profileId`. Do not infer selection from manuscript vocabulary,
+`discipline.name` or `field`; those free-text declarations can prompt an optional proposal.
+Unavailable or unselected guidance leaves general conventions available. Do not merge
+profiles for interdisciplinary work; ask about one primary profile or none if a choice is
+requested but ambiguous. State the selected id when it informs advice. Declared terminology,
+current instructions and venue/document requirements take precedence; guidance never
+authorises rewriting or overrides meaning preservation, never-invent or evidence boundaries.

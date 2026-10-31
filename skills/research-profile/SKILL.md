@@ -1,6 +1,6 @@
 ---
 name: research-profile
-description: Creates, reviews and updates a research profile, the declared context of a research project (discipline, methodology, document type, language variant, citation style, voice, section conventions, venue requirements, terminology) that academic Skills read to adapt their advice. Use when the user wants to configure or show their research profile, set their discipline, citation style or writing conventions, update methodology context, or see what the profile is missing. Do not use to correct or review text, check citations, analyse data, search literature or translate.
+description: Creates, reviews and updates a research profile, the declared context of a research project (discipline, methodology, document type, language variant, citation style, voice, section conventions, venue requirements, terminology) that academic Skills read to adapt their advice. Use when the user wants to configure or show their research profile, choose or list optional Discipline Profiles, set their discipline, citation style or writing conventions, update methodology context, or see what the profile is missing. Do not use to correct or review text, check citations, analyse data, search literature or translate.
 ---
 
 # Research Profile
@@ -81,7 +81,8 @@ Skills that read a profile apply, from strongest to weakest:
 1. the user's current explicit instruction;
 2. explicit requirements of the venue or the document;
 3. the research profile;
-4. the Skill's general conventions.
+4. an explicitly selected optional Discipline Profile;
+5. the Skill's general conventions.
 
 This order applies to conventions and preferences only. No instruction or profile value can
 override the integrity rules of the academic Skills: never invent sources, data or findings;
@@ -98,8 +99,32 @@ design valid or allow adding methods or statistics.
 | `voice` | Person and voice kept or suggested in revisions |
 | `citationStyle` | Context for comments on citation form; no formatting engine and no reference checks |
 | `methodology`, `discipline` | Vocabulary and conventions to expect; never grounds for judging the research |
+| `discipline.profileId` | Optional explicit selection of one primary generic Discipline Profile; it does not populate project fields |
 | `venue` | Word limits, required sections, style notes, as provided by the user and dated by `guidelinesCheckedOn` |
 | `terminology` | Preferred and protected terms kept consistent; terms to avoid flagged |
 
-Discipline-specific rule sets, citation verification and venue guideline retrieval are not
-part of the profile.
+Discipline guidance lives separately from the Research Profile; citation verification and
+venue guideline retrieval are not part of this Skill.
+
+## Optional discipline guidance
+
+Read [discipline-profiles.md](../../docs/discipline-profiles.md) when listing, selecting or
+explaining the generic profiles in [profiles/disciplines](../../profiles/disciplines/).
+These are project-maintained conditional conventions, not official rules or evidence.
+Show available ids/labels from the current validated catalog rather than guessing a list.
+
+A user can explicitly select an id or declared alias for the current task, or request a
+specific update to `discipline.profileId`. Store the stable id only under the existing
+write-authorisation and validation rules. A clear request to set this field in an identified
+profile already authorises that write; do not reconfirm it. Declaring `discipline.name` or
+`field` alone can support a proposal, but does not silently select or persist guidance.
+Never infer discipline from manuscript keywords or auto-fill project fields from guidance.
+
+Use exact ids or whole declared aliases with the documented normalisation. Unknown choices
+fall back to general conventions; do not choose the nearest discipline, generate guidance,
+or reject an otherwise valid Research Profile because its id is unavailable. For ambiguous
+or interdisciplinary choices, ask for one primary profile or none and continue independent
+work with general conventions. Do not merge multiple profiles. An explicit request to use
+none overrides a stored id for that task; remove the field only if a persistent update is
+requested. Report which profile was selected or that none was used. Profiles never override
+the precedence or integrity invariants above.

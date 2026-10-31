@@ -14,112 +14,17 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import Ajv2020 from 'ajv/dist/2020.js';
-import { parseAllDocuments } from 'yaml';
+import { describeSchemaError, parseProfileDocument, secretPaths } from './profile-validation.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const schema = JSON.parse(readFileSync(join(root, 'schemas', 'research-profile.schema.json'), 'utf8'));
 const validateSchema = new Ajv2020({ allErrors: true, strict: true }).compile(schema);
 
-/** Keys that would hold credentials. A research profile never needs them. */
-const SECRET_KEY = /(?:^|-)(password|passwd|passphrase|secret|token|api-key|access-key|private-key|credentials?)$/;
-/** Well-known credential formats. */
-const SECRET_VALUE = [
-  /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
-  /\b(sk|pk|rk)-[A-Za-z0-9_-]{20,}/,
-  /\bgh[pousr]_[A-Za-z0-9]{30,}/,
-  /\bAKIA[0-9A-Z]{16}\b/,
-  /\bxox[abprs]-[A-Za-z0-9-]{10,}/,
-  /\bAIza[0-9A-Za-z_-]{35}\b/,
-  /\bBearer\s+[A-Za-z0-9._~+/-]{20,}/,
-];
-
-function describeSchemaError(error) {
-  const path = safePath(error.instancePath) || '(root)';
-  if (error.keyword === 'additionalProperties') {
-    return `${path}: unknown key "${safeKey(error.params.additionalProperty)}"`;
-  }
-  if (error.keyword === 'const') {
-    return `${path}: must be ${JSON.stringify(error.params.allowedValue)}`;
-  }
-  if (error.keyword === 'enum') {
-    return `${path}: must be one of ${error.params.allowedValues.join(', ')}`;
-  }
-  if (error.keyword === 'if') {
-    return null; // Ajv reports the failing "then" requirement separately.
-  }
-  return `${path}: ${error.message}`;
-}
-
-const looksLikeSecret = (value) => SECRET_VALUE.some((pattern) => pattern.test(value));
-const safeKey = (key) => looksLikeSecret(key) ? '[redacted]' : key;
-const safePath = (path) => path.split('/').map(safeKey).join('/');
-const pointerKey = (key) => safeKey(key).replace(/~/g, '~0').replace(/\//g, '~1');
-const isSecretKey = (key) => SECRET_KEY.test(key.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase().replace(/_/g, '-'));
-
-/** JSON Schema assumes finite JSON values, not cyclic alias graphs or YAML infinities. */
-function jsonProblem(value, ancestors = new WeakSet()) {
-  if (typeof value === 'number' && !Number.isFinite(value)) return '(yaml): non-finite numbers are not supported';
-  if (value === null || typeof value !== 'object') return null;
-  if (ancestors.has(value)) return '(yaml): cyclic aliases are not supported';
-  ancestors.add(value);
-  for (const item of Object.values(value)) {
-    const problem = jsonProblem(item, ancestors);
-    if (problem) return problem;
-  }
-  ancestors.delete(value);
-  return null;
-}
-
-/** Library diagnostics may quote input; report only controlled text and the location. */
-function yamlProblem(error) {
-  const line = error.linePos?.[0]?.line;
-  const message = error.code === 'DUPLICATE_KEY' ? 'Map keys must be unique' : `invalid or unsupported YAML (${error.code})`;
-  return `(yaml)${line ? ` line ${line}` : ''}: ${message}`;
-}
-
-/** Paths of keys or string values that look like credentials. */
-function secretPaths(value, path = '') {
-  if (typeof value === 'string') {
-    return looksLikeSecret(value) ? [`${path || '(root)'}: value looks like a secret`] : [];
-  }
-  if (Array.isArray(value)) {
-    return value.flatMap((item, index) => secretPaths(item, `${path}/${index}`));
-  }
-  if (value !== null && typeof value === 'object') {
-    return Object.entries(value).flatMap(([key, item]) => [
-      ...(isSecretKey(key) || looksLikeSecret(key) ? [`${path}/${pointerKey(key)}: secrets must not be stored in a research profile`] : []),
-      ...secretPaths(item, `${path}/${pointerKey(key)}`),
-    ]);
-  }
-  return [];
-}
-
 /** Returns the problems of a profile's YAML text, as "path: message" strings; empty when valid. */
 export function validateProfile(text) {
-  if (typeof text !== 'string') return ['(root): expected YAML text'];
-  const documents = parseAllDocuments(text, { uniqueKeys: true, stringKeys: true, resolveKnownTags: false, merge: false });
-  if (documents.length === 0) {
-    return ['(root): the file is empty; a profile needs at least profileVersion'];
-  }
-  if (documents.length !== 1) {
-    return [`(root): expected one YAML document, found ${documents.length}`];
-  }
-  const [document] = documents;
-  if (document.errors.length > 0 || document.warnings.length > 0) {
-    return [...document.errors, ...document.warnings].map(yamlProblem);
-  }
-  if (document.directives.yaml.version !== '1.2') return ['(yaml): profiles require YAML 1.2'];
-  let profile;
-  try {
-    profile = document.toJS({ maxAliasCount: 100 });
-  } catch {
-    return ['(yaml): cannot resolve aliases safely'];
-  }
-  const graphProblem = jsonProblem(profile);
-  if (graphProblem) return [graphProblem];
-  if (profile === null || typeof profile !== 'object' || Array.isArray(profile)) {
-    return ['(root): a profile must be a YAML mapping of keys to values'];
-  }
+  const parsed = parseProfileDocument(text);
+  if (parsed.problems.length > 0) return parsed.problems;
+  const { profile } = parsed;
 
   const problems = [];
   if (!validateSchema(profile)) {

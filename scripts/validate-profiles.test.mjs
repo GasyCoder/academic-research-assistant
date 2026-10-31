@@ -77,6 +77,15 @@ test('accepts the repository example, and its commented examples once uncommente
 
 test('accepts a profile using every section', () => valid(complete));
 
+test('accepts an optional explicit discipline profile id without requiring a catalog match', () => {
+  valid('profileVersion: 1\ndiscipline: {profileId: computer-science}\n');
+  valid('profileVersion: 1\ndiscipline: {name: Interdisciplinary project, field: Mixed perspectives}\n');
+  valid('profileVersion: 1\ndiscipline: {name: Other discipline, profileId: unavailable-discipline}\n');
+  for (const id of ['null', '""', '"Computer Science"', '[computer-science]', '7']) {
+    invalid(`profileVersion: 1\ndiscipline: {profileId: ${id}}\n`, /\/discipline\/profileId:/);
+  }
+});
+
 test('accepts a profile with only the format version: everything else is unknown', () => valid('profileVersion: 1\n'));
 
 test('rejects invalid YAML with its line', () => invalid('profileVersion: 1\nproject: [unclosed\n', /^\(yaml\) line \d+:/));
