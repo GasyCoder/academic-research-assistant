@@ -41,3 +41,17 @@ requirements, and decide how to use the results returned by MCP tools.
 
 Dynamic, project-specific context of the researcher. It is configurable and
 never hard-coded into reusable Skills or MCP servers.
+
+### Discipline Profiles
+
+Optional, versioned, non-personal YAML guidance in `profiles/disciplines/`, separate from
+project context. A Research Profile can explicitly select one primary profile through
+`discipline.profileId`; existing profiles remain valid without it. No selection is inferred
+from manuscript content, and unavailable guidance falls back to general Skill conventions.
+There is no multi-profile merge engine or new MCP tool.
+
+For conventions: current explicit instruction > venue/document requirement > Research
+Profile > Discipline Profile > generic Skill conventions. Never-invent, evidence-bound
+reasoning, meaning preservation and absence ≠ nonexistence remain overriding invariants.
+Discipline guidance is conditional context, never evidence or a scientific-validity rule.
+Selection, schema and validation: [discipline-profiles.md](discipline-profiles.md).

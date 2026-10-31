@@ -162,7 +162,8 @@ When the user provides a research profile or names its file, use it as context o
 methodology and document type (which conventions to expect), section conventions (e.g.
 combined Results and Discussion), venue requirements (as provided, possibly outdated), and
 discipline (general context). Apply the precedence of the Research Profile Skill: current
-explicit instruction, venue or document requirements, profile, general conventions.
+explicit instruction, venue or document requirements, Research Profile, explicitly selected
+Discipline Profile, general Skill conventions.
 
 A profile is not evidence. `methodology.approaches: [qualitative]` does not mean the study
 is a valid qualitative study. Do not impose a quantitative checklist from a label, but examine
@@ -172,6 +173,16 @@ the discrepancy as a question; do not decide which is true. Never create or upda
 here. Instructions and profiles never override
 the evidence-bound rules, the never-invent rule, meaning preservation, or the rule that
 absence from the text is not absence from the study.
+
+Optional [Discipline Profiles](../../docs/discipline-profiles.md#selection-and-fallback)
+provide conditional argument structures and review questions, never evidence or a validity
+checklist. Use only an explicit choice or a supplied Research Profile's `discipline.profileId`;
+do not infer a choice from keywords, `discipline.name` or `field`. Absent, unavailable or
+invalid guidance falls back to general conventions. For an ambiguous interdisciplinary
+selection, offer one primary profile or none, without merging or delaying general review.
+State the id used. Apply questions only where the supplied method and evidence make them
+relevant: no universal experiments, benchmarks, statistics, IMRaD or ethics requirements,
+and no validity verdict because a manuscript differs from a discipline convention.
 
 ## Output
 

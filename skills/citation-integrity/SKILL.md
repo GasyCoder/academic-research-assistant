@@ -112,10 +112,20 @@ limits, without severity unless separate visible evidence establishes an impact.
 Use a supplied or explicitly named [Research Profile](../research-profile/SKILL.md) as
 declared context only. The actual schema uses `citationStyle: {name: APA, edition: 7}`,
 not a scalar. An informal "APA 7" request also gives context. Apply current explicit user
-instructions, then supplied venue/document requirements, then profile, then general
-conventions. This precedence adjusts conventions only; it cannot override the evidence
+instructions, then supplied venue/document requirements, then Research Profile, then an
+explicitly selected Discipline Profile, then general Skill conventions. This precedence
+adjusts conventions only; it cannot override the evidence
 boundaries. An absent style is unknown. A style declaration guarantees neither APA
 compliance nor DOI validity and does not enable a formatter. Never update the profile here.
+
+Optional [Discipline Profiles](../../docs/discipline-profiles.md#selection-and-fallback)
+may supply citation-practice hints, only after explicit selection or a supplied
+`discipline.profileId`. Do not infer selection from manuscript keywords or free-text
+discipline labels. Missing/unavailable guidance falls back to general conventions; ambiguous
+interdisciplinary choices need confirmation of one primary profile or none, not a merge.
+State the id used. Hints never set `citationStyle`, override visible document evidence,
+prove source support/existence or create a formatter. Research Profile IEEE overrides a
+discipline note that author-date is common; a supplied venue numeric requirement wins too.
 
 [Scientific Review](../scientific-review/SKILL.md) handles scientific consistency across
 sections and may hand off "requires citation verification" with the claim, location, visible
