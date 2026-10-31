@@ -16,7 +16,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const skillsDir = resolve(process.argv[2] ?? join(root, 'skills'));
 
 /** Frontmatter keys of the Agent Skills format; anything else is probably a typo. */
-const ALLOWED_KEYS = new Set(['name', 'description', 'license', 'allowed-tools', 'metadata']);
+const ALLOWED_KEYS = new Set(['name', 'description', 'license', 'compatibility', 'allowed-tools', 'metadata']);
 const NAME_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 /** Researcher, institution or place names that must never appear in reusable Skills. */
 const RESEARCHER_SPECIFIC = /\b(florent|bezara|umg|madagascar|mahajanga|antananarivo)\b/i;
@@ -31,8 +31,9 @@ function filesUnder(directory) {
   });
 }
 
-/** Parses `key: value` frontmatter lines; returns null when the file has none. */
+/** Checks the repository's single-line `key: value` subset, not general YAML. */
 function frontmatter(file, text) {
+  text = text.replace(/\r\n/g, '\n');
   if (!text.startsWith('---\n')) {
     return null;
   }
@@ -48,22 +49,34 @@ function frontmatter(file, text) {
       fail(file, `unsupported frontmatter line: ${line}`);
       continue;
     }
-    fields[match[1]] = match[2].trim();
+    const key = match[1];
+    const value = match[2].trim();
+    if (Object.hasOwn(fields, key)) {
+      fail(file, `duplicate frontmatter key "${key}"`);
+      continue;
+    }
+    if (!/^["']/.test(value) && /:\s/.test(value)) {
+      fail(file, `unsupported frontmatter value for "${key}": an unquoted colon followed by whitespace is invalid YAML`);
+      continue;
+    }
+    fields[key] = value;
   }
   return fields;
 }
 
 /** GitHub-style heading anchors of a Markdown file. */
 function anchors(text) {
-  return new Set(
-    Array.from(text.matchAll(/^#{1,6}\s+(.+)$/gm), ([, heading]) =>
-      heading
-        .trim()
-        .toLowerCase()
-        .replace(/[^\p{L}\p{N}\s-]/gu, '')
-        .replace(/\s/g, '-'),
-    ),
-  );
+  const found = new Set();
+  for (const [, heading] of text.matchAll(/^#{1,6}[ \t]+(.+)$/gm)) {
+    const base = heading.trim().toLowerCase().replace(/[^\p{L}\p{M}\p{N} -]/gu, '').replace(/ /g, '-');
+    let anchor = base;
+    let suffix = 0;
+    while (found.has(anchor)) {
+      anchor = `${base}-${++suffix}`;
+    }
+    found.add(anchor);
+  }
+  return found;
 }
 
 function checkSkill(directory) {
@@ -98,6 +111,9 @@ function checkSkill(directory) {
   }
   if (/[<>]/.test(description)) {
     fail(file, 'description must not contain < or >');
+  }
+  if (fields.compatibility !== undefined && (fields.compatibility.length === 0 || fields.compatibility.length > 500)) {
+    fail(file, 'compatibility must contain 1-500 characters');
   }
 }
 
