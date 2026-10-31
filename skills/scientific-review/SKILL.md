@@ -17,7 +17,7 @@ discipline, methodology and language, and judges only the text provided.
 | Grammar, spelling, punctuation | LanguageTool MCP, through the Academic Writing Skill |
 | Wording, clarity, concision, register, local coherence, rewriting | [Academic Writing Skill](../academic-writing/SKILL.md) |
 | Declared project context and conventions | [Research Profile Skill](../research-profile/SKILL.md) |
-| Whether references exist, are correct and support what they are cited for | Citation Integrity (planned); this Skill only marks "requires citation verification" |
+| Internal citation/reference matching and attribution; support comparison when source content is supplied | [Citation Integrity](../citation-integrity/SKILL.md); this Skill only marks "requires citation verification"; external existence verification remains unavailable |
 | Global consistency, alignment between sections, scope of claims, limitations | **This Skill** |
 
 When a finding is mainly about wording, do not analyse it here: note briefly that a writing
@@ -115,6 +115,10 @@ features of the approach, not as gaps. Quantitative standards are not universal 
   established without a literature search, which this Skill does not do.
 - An important claim without visible support: "requires citation verification". Do not
   invent or judge sources.
+  For a Citation Integrity handoff, include the claim, location, visible citation, supplied
+  bibliography/source content and coverage limits. Its internal match is not evidence of
+  source existence or claim support; missing external metadata or source content remains
+  an explicit verification need. No automatic external lookup or recursive review loop.
 - Ethics: if relevant information is not in the text, write "ethics information is not
   visible in the provided text". Never conclude that approval or consent is missing, and give
   no legal or regulatory advice.
