@@ -1,1 +1,262 @@
-{}
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/GasyCoder/academic-research-assistant/main/schemas/research-profile.schema.json",
+  "title": "Research profile",
+  "description": "Declared context of a research project, read by the academic Skills. Every value present was stated or confirmed by the user; an absent field means unknown. null and empty strings or lists are not used: omit the field instead.",
+  "type": "object",
+  "required": ["profileVersion"],
+  "additionalProperties": false,
+  "patternProperties": {
+    "^x-[a-z0-9-]+$": {
+      "description": "Root-level local extension, ignored unless the user explains it. Values are non-empty JSON data; omit unknown values. Never store secrets here.",
+      "$ref": "#/$defs/extensionValue"
+    }
+  },
+  "properties": {
+    "profileVersion": {
+      "description": "Version of the profile format (not of the repository). Increased only when the format changes incompatibly.",
+      "const": 1
+    },
+    "id": {
+      "description": "Optional non-personal slug naming the profile, e.g. a short project code.",
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "maxLength": 64
+    },
+    "project": {
+      "description": "The research project, not the researcher.",
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "title": { "$ref": "#/$defs/text" },
+        "topic": { "$ref": "#/$defs/text" },
+        "keywords": { "$ref": "#/$defs/textList" },
+        "source": { "$ref": "#/$defs/source" }
+      }
+    },
+    "discipline": {
+      "description": "Free text, e.g. a discipline, a field within it and a subfield. No closed taxonomy.",
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "name": { "$ref": "#/$defs/text" },
+        "field": { "$ref": "#/$defs/text" },
+        "subfield": { "$ref": "#/$defs/text" },
+        "source": { "$ref": "#/$defs/source" }
+      }
+    },
+    "methodology": {
+      "description": "Context for writing conventions only; it does not make a design valid.",
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "approaches": {
+          "description": "One or more approaches; use other and describe it in notes when none fits.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["qualitative", "quantitative", "mixed", "theoretical", "computational", "experimental", "doctrinal", "other"]
+          }
+        },
+        "methods": {
+          "description": "Methods as the user names them, e.g. interviews, simulations, case analysis.",
+          "$ref": "#/$defs/textList"
+        },
+        "notes": { "$ref": "#/$defs/text" },
+        "source": { "$ref": "#/$defs/source" }
+      },
+      "if": { "required": ["approaches"], "properties": { "approaches": { "type": "array", "contains": { "const": "other" } } } },
+      "then": { "required": ["notes"], "properties": { "notes": true } }
+    },
+    "document": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "type": {
+          "enum": ["thesis", "dissertation", "article", "conference-paper", "report", "proposal", "book-chapter", "other"]
+        },
+        "typeNote": {
+          "description": "What the document is, required when type is other.",
+          "$ref": "#/$defs/text"
+        },
+        "currentSection": { "$ref": "#/$defs/text" },
+        "source": { "$ref": "#/$defs/source" }
+      },
+      "if": { "required": ["type"], "properties": { "type": { "const": "other" } } },
+      "then": { "required": ["typeNote"], "properties": { "typeNote": true } }
+    },
+    "language": {
+      "description": "Writing language. Whether LanguageTool supports it is checked with get_supported_languages, not declared here.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["primary"],
+      "properties": {
+        "primary": {
+          "description": "Primary language subtag, e.g. en or fr.",
+          "type": "string",
+          "pattern": "^[A-Za-z]{2,3}$"
+        },
+        "variant": {
+          "description": "Variant tag starting with primary (case-insensitive), e.g. en-GB or en-US-u-ca-gregory. Basic subtag syntax only, not full BCP 47 registry validation.",
+          "type": "string",
+          "pattern": "^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8})+$"
+        },
+        "source": { "$ref": "#/$defs/source" }
+      }
+    },
+    "citationStyle": {
+      "description": "Context only: no citation formatting or reference verification is implied.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "description": "e.g. APA, Chicago author-date, IEEE, Vancouver, Harvard, or a name for an institution-, journal-specific or custom style.",
+          "$ref": "#/$defs/text"
+        },
+        "edition": {
+          "description": "e.g. 7 for APA 7.",
+          "anyOf": [
+            { "type": "string", "minLength": 1, "pattern": "\\S" },
+            { "type": "integer", "minimum": 1 }
+          ]
+        },
+        "notes": { "$ref": "#/$defs/text" },
+        "source": { "$ref": "#/$defs/source" }
+      }
+    },
+    "voice": {
+      "description": "A preference for this project, not a universal rule.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["preference"],
+      "properties": {
+        "preference": {
+          "enum": ["first-person-singular", "first-person-plural", "impersonal", "passive", "no-preference"]
+        },
+        "notes": { "$ref": "#/$defs/text" },
+        "source": { "$ref": "#/$defs/source" }
+      }
+    },
+    "sections": {
+      "description": "Section conventions of the document.",
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "expected": {
+          "description": "Expected sections, in order.",
+          "$ref": "#/$defs/textList"
+        },
+        "resultsAndDiscussion": { "enum": ["separate", "combined"] },
+        "abstract": {
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "properties": {
+            "structured": { "type": "boolean" },
+            "requiredParts": { "$ref": "#/$defs/textList" },
+            "notes": { "$ref": "#/$defs/text" }
+          }
+        },
+        "notes": { "$ref": "#/$defs/text" },
+        "source": { "$ref": "#/$defs/source" }
+      }
+    },
+    "venue": {
+      "description": "Requirements of the target journal, conference or institution, only as provided by the user; never fetched automatically.",
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "name": { "$ref": "#/$defs/text" },
+        "wordLimit": { "$ref": "#/$defs/positiveInteger" },
+        "abstractWordLimit": { "$ref": "#/$defs/positiveInteger" },
+        "requiredSections": { "$ref": "#/$defs/textList" },
+        "styleNotes": { "$ref": "#/$defs/textList" },
+        "guidelinesCheckedOn": {
+          "description": "Date (YYYY-MM-DD) on which the user read the venue's guidelines; requirements may have changed since.",
+          "type": "string",
+          "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$"
+        },
+        "source": { "$ref": "#/$defs/source" }
+      }
+    },
+    "terminology": {
+      "description": "A small lexical glossary. It fixes wording, never facts.",
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "preferred": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["term"],
+            "properties": {
+              "term": { "$ref": "#/$defs/text" },
+              "insteadOf": { "$ref": "#/$defs/textList" }
+            }
+          }
+        },
+        "avoid": { "$ref": "#/$defs/textList" },
+        "abbreviations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["abbreviation", "expansion"],
+            "properties": {
+              "abbreviation": { "$ref": "#/$defs/text" },
+              "expansion": { "$ref": "#/$defs/text" }
+            }
+          }
+        },
+        "protected": {
+          "description": "Expressions to keep exactly as written, e.g. names of instruments, models or legal terms.",
+          "$ref": "#/$defs/textList"
+        },
+        "source": { "$ref": "#/$defs/source" }
+      }
+    }
+  },
+  "$defs": {
+    "extensionValue": {
+      "anyOf": [
+        { "$ref": "#/$defs/text" },
+        { "type": "number" },
+        { "type": "boolean" },
+        { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/extensionValue" } },
+        { "type": "object", "minProperties": 1, "additionalProperties": { "$ref": "#/$defs/extensionValue" } }
+      ]
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "pattern": "\\S"
+    },
+    "textList": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/text" }
+    },
+    "positiveInteger": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "source": {
+      "description": "Where the section's values come from: stated by the user, a suggestion the user confirmed, or venue guidelines the user provided.",
+      "enum": ["stated", "confirmed", "venue-guidelines"]
+    }
+  }
+}

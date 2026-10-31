@@ -19,7 +19,7 @@ Initial components:
 - LanguageTool MCP server (available)
 - Academic Writing Skill (available, see below)
 - Scientific Review Skill (planned)
-- Research Profile Skill (planned)
+- Research Profile Skill (available, see below)
 - Citation Integrity Skill (planned)
 
 ## LanguageTool MCP server
@@ -82,7 +82,8 @@ Configuration, tools, limits, cold start and client setup in detail:
 ### Development
 
 ```bash
-npm run check              # what CI runs: skill validation, typecheck, tests, build, npm package check
+npm run check              # what CI runs: skill and profile validation, typecheck, tests, build, npm package check
+npm run validate:profiles  # research profiles; add -- path/to/profile.yaml for a given file
 npm run test:integration   # against a real LanguageTool on LANGUAGETOOL_BASE_URL
 ```
 
@@ -96,6 +97,21 @@ argumentation and paragraph structure. It uses the LanguageTool MCP tools for li
 diagnostics and keeps the academic judgement to itself. It preserves the author's meaning,
 numbers and citations, and never invents sources, data or findings. Manual validation
 scenarios are in [`evaluation/scenarios.md`](skills/academic-writing/evaluation/scenarios.md).
+
+## Research Profile
+
+A research profile is a YAML file declaring the context of a research project (discipline,
+methodology, document type, language variant, citation style, voice, section conventions,
+venue requirements, terminology) that the academic Skills follow when it is provided. It only
+holds what the user states or confirms; an absent field means unknown, and the Skills then
+use general conventions. The [Research Profile Skill](skills/research-profile/SKILL.md) creates
+and updates profiles with the user's consent.
+
+- Format: [`schemas/research-profile.schema.json`](schemas/research-profile.schema.json),
+  described in [profile-format.md](skills/research-profile/references/profile-format.md).
+- Example: [`profiles/default.yaml`](profiles/default.yaml).
+- Real profiles: `profiles/local/`, ignored by Git. Never commit a real profile, and never
+  store secrets or unneeded personal data in one.
 
 ## Status
 

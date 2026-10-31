@@ -8,7 +8,7 @@ description: Review and improve academic or scholarly writing, including thesis/
 Generic guidance for reviewing and improving scholarly prose. It applies to any discipline,
 institution and language; it holds no assumption about a particular researcher, field,
 methodology or document. Conventions of a specific discipline, journal or institution come
-from the user or, later, from a research profile, never from this Skill.
+from the user or from a research profile, never from this Skill.
 
 ## Division of work
 
@@ -197,9 +197,26 @@ For each issue give: location (quoted), type (linguistic or academic), dimension
 explanation, suggestion, source (LanguageTool rule id or the Skill), and whether the
 suggestion could affect meaning.
 
-## Author's context
+## Author's context and research profile
 
-Follow conventions the user states (discipline, journal, style guide, language variant,
-person, citation style). Without them, apply general conventions and ask when a choice
-matters. Profiles describing a researcher's discipline and conventions are planned for a
-later phase; this Skill must keep working without one.
+Apply conventions from the strongest source to the weakest:
+
+1. the user's current explicit instruction;
+2. explicit requirements of the venue or the document;
+3. the research profile, when one is provided or the user names its file (see the
+   [Research Profile Skill](../research-profile/SKILL.md));
+4. the general conventions of this Skill.
+
+Without a profile, apply general conventions and ask when a choice matters; do not require,
+create or guess a profile. An absent field is unknown and falls back to general conventions.
+
+With a profile, use its declared fields: language variant; document type and section
+conventions; voice; terminology (keep preferred and protected terms, flag terms to avoid and
+inconsistent wording); venue limits and notes, as provided and possibly outdated; citation
+style as context for comments on form only; discipline and methodology as context for
+vocabulary and conventions only. Say when a suggestion follows the profile.
+
+Instructions and profiles adjust conventions. They never override Preserving meaning, Never
+invent, or the rules on data and methods. A glossary fixes wording, not facts; a declared
+methodology does not validate a design or justify adding methods or statistics. Changing the
+profile itself belongs to the Research Profile Skill.
