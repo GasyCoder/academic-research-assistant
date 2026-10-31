@@ -61,10 +61,13 @@ Infer the mode from the request; ask only if the expected output is unclear. Def
 The tools come from the LanguageTool MCP server (`packages/languagetool-mcp`). Their exact
 names depend on how the client registered the server (e.g. `mcp__languagetool__check_text`).
 
-- **Choosing the tool**: a sentence, paragraph or section of up to 50,000 characters →
-  `check_text`; a longer chapter or document of up to 100,000 characters → `check_document`.
-  Beyond that, split at headings or chapters, check each part, and add each part's start to
-  its offsets.
+- **Choosing the tool**: up to 50,000 UTF-16 code units → `check_text`; more than 50,000
+  and up to 100,000 UTF-16 code units → `check_document`. Count the exact submitted text,
+  not words or Unicode code points. Beyond 100,000 units, review sections separately,
+  identified by heading or section id, and keep each submission within the applicable limit.
+  Report offsets relative to that submitted section, with its id and a quotation. The MCP
+  does not aggregate separate submissions into global document offsets; do not promise that.
+  Disclose that independently checked sections can miss issues across their boundaries.
 - **Language**: pass a code returned by `get_supported_languages` (e.g. `en-US`, `en-GB`, `fr`).
   Keep the variant the document uses; use `auto` only when the language is unknown. Do not
   assume a language is installed.
@@ -76,11 +79,16 @@ names depend on how the client registered the server (e.g. `mcp__languagetool__c
   are UTF-16 code units of the text that was sent).
 - **`check_document` results**: report coverage honestly. If `complete` is false, say which
   ranges were not checked (`failedRanges`) or where results stop (`truncated`, `truncatedAt`);
-  never call a document error-free on partial results. `replacementsTruncated` means more
-  suggestions existed.
-- **Failures**: `TEXT_TOO_LONG` → split; `UNREACHABLE` or repeated `TIMEOUT` → `health_check`,
-  tell the user, and continue the academic review while stating that no linguistic check was
-  done. A first check in a language can be slow; retry at most once, never in a loop.
+  `incompleteResults` means LanguageTool itself reported incomplete diagnostics, even when
+  there are no failed ranges or truncation. Never call a document error-free on partial
+  results; even `complete: true` is not a guarantee of linguistic correctness.
+  `replacementsTruncated` means more suggestions existed, not that ranges were unchecked.
+- **Failures**: do not automatically resend text after a failed check. On `UNREACHABLE` or
+  the first `TIMEOUT`, call `health_check` if available, tell the user what failed, and
+  continue the academic review with the coverage limitation stated. LanguageTool may still
+  be processing a timed-out request; a healthy response proves liveness, not check readiness.
+  Retry only if the user or caller explicitly decides to resend, with that risk understood.
+  `TEXT_TOO_LONG` is rejected before transmission: submit smaller sections within the limit.
 - Send only the text the user asked to have checked.
 
 ## Severity

@@ -107,21 +107,36 @@ Expected:
 
 ## 8. Long document
 
-A chapter of about 80,000 characters.
+A synthetic chapter of exactly 80,000 UTF-16 code units, for example generated with:
+
+```js
+const paragraph = 'This chapter discusses competing interpretations of the passage.\n\n';
+const text = 'Chapter 1\n\n' + paragraph.repeat(2000).slice(0, 80_000 - 'Chapter 1\n\n'.length);
+```
 
 Request: "Check the language of this chapter and point out the main writing problems."
 
 Expected:
 
-- calls `check_document` (more than 50,000 characters), not `check_text`;
+- calls `check_document` (more than 50,000 UTF-16 units), not `check_text`;
 - reports coverage: if `complete` is false, names the ranges in `failedRanges` or the
   `truncatedAt` offset, and does not call the chapter error-free;
 - groups linguistic issues instead of listing every one, and prioritises a few academic issues
   across sections;
 - does not rewrite the whole chapter, since a review was requested.
 
-For a document over 100,000 characters, it splits at headings, checks each part with
-`check_document` and reports offsets relative to the whole document.
+Variants (record the tool responses for later repeatable evaluation):
+
+- A document over 100,000 UTF-16 units: checks separate sections identified by heading or id,
+  uses `check_text` or `check_document` according to each section's size, and reports
+  section-relative offsets and quotations. No invented global offset aggregation or claim
+  of checking relations across section boundaries.
+- `complete: false`, `failedRanges: []`, `truncated: false`, `incompleteResults: true`:
+  reports upstream incomplete diagnostics, not complete coverage.
+- `check_document` returns `TIMEOUT` and `health_check` reports `ok`: reports the failure
+  and continues academic review without a second text submission. Does not equate health
+  with readiness or silently resend all or part of the manuscript.
+- A 30,000-emoji passage has 60,000 UTF-16 units: chooses `check_document`, not `check_text`.
 
 ## Checks that apply to every scenario
 
