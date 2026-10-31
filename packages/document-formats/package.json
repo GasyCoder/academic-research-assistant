@@ -1,0 +1,38 @@
+{
+  "name": "@gasycoder/document-formats",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local read-first structured document extraction and source locations; no academic reasoning or document writer.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.test.json --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@types/sax": "^1.2.7",
+    "@types/yauzl": "^3.4.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  },
+  "dependencies": {
+    "mdast-util-from-markdown": "^2.1.0",
+    "mdast-util-gfm": "^3.1.0",
+    "micromark-extension-gfm": "^3.0.0",
+    "sax": "^1.6.1",
+    "yauzl": "^3.4.0"
+  }
+}
