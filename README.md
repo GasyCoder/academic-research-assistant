@@ -18,7 +18,7 @@ Initial components:
 
 - LanguageTool MCP server (available)
 - Academic Writing Skill (available, see below)
-- Scientific Review Skill (planned)
+- Scientific Review Skill (available, see below)
 - Research Profile Skill (available, see below)
 - Citation Integrity Skill (planned)
 
@@ -97,6 +97,17 @@ argumentation and paragraph structure. It uses the LanguageTool MCP tools for li
 diagnostics and keeps the academic judgement to itself. It preserves the author's meaning,
 numbers and citations, and never invents sources, data or findings. Manual validation
 scenarios are in [`evaluation/scenarios.md`](skills/academic-writing/evaluation/scenarios.md).
+
+## Scientific Review Skill
+
+[`skills/scientific-review`](skills/scientific-review/SKILL.md) reviews how a manuscript,
+thesis chapter or set of sections holds together: alignment between question, methods,
+results, discussion and conclusions, scope of claims, limitations, and consistency across
+sections and numbers. It judges only the text provided, quotes its evidence, states which
+sections it could not review, and gives no verdict on validity, no score and no acceptance
+recommendation. Wording is left to the Academic Writing Skill and reference checking to
+Citation Integrity (planned). Validation scenarios:
+[`evaluation/scenarios.md`](skills/scientific-review/evaluation/scenarios.md).
 
 ## Research Profile
 
