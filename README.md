@@ -20,7 +20,7 @@ Initial components:
 - Academic Writing Skill (available, see below)
 - Scientific Review Skill (available, see below)
 - Research Profile Skill (available, see below)
-- Citation Integrity Skill (planned)
+- Citation Integrity Skill (available, see below)
 
 ## LanguageTool MCP server
 
@@ -106,8 +106,18 @@ results, discussion and conclusions, scope of claims, limitations, and consisten
 sections and numbers. It judges only the text provided, quotes its evidence, states which
 sections it could not review, and gives no verdict on validity, no score and no acceptance
 recommendation. Wording is left to the Academic Writing Skill and reference checking to
-Citation Integrity (planned). Validation scenarios:
+Citation Integrity. Validation scenarios:
 [`evaluation/scenarios.md`](skills/scientific-review/evaluation/scenarios.md).
+
+## Citation Integrity Skill
+
+[`skills/citation-integrity`](skills/citation-integrity/SKILL.md) checks internal consistency
+of visible citations, references and attribution in supplied materials: author-date and
+numeric matching, ambiguous or missing matches, duplicates and scoped orphan references.
+It distinguishes an internal match from actual claim support, comparing source passages
+only when supplied. No external verification is available yet: no network lookup, DOI
+existence certification, invented metadata or automatic misconduct accusations. Validation
+scenarios: [`evaluation/scenarios.md`](skills/citation-integrity/evaluation/scenarios.md).
 
 ## Research Profile
 
