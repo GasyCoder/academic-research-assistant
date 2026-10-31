@@ -95,12 +95,66 @@ function createSegmenters(text: string, locale: string | undefined): Segmenters 
     // LanguageTool accepts codes that are not valid BCP 47 tags for Intl.
     sentence = new Intl.Segmenter(undefined, { granularity: 'sentence' });
   }
-  const grapheme = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
   // A fixed slice margin cannot preserve regional-indicator parity or arbitrarily
   // long combining/ZWJ sequences. Compute boundaries against the original text.
-  const graphemePositions = Array.from(grapheme.segment(text), ({ index }) => index);
-  graphemePositions.push(text.length);
+  const graphemePositions = graphemeBoundaryPositions(text);
   return { sentence, graphemePositions, graphemeBoundaries: new Set(graphemePositions) };
+}
+
+/**
+ * Grapheme boundaries are computed in windows of this many code units. Node 20's Intl.Segmenter
+ * spends time proportional to its input on every segment it yields: one pass over a 100,000-unit
+ * document took seconds there, against milliseconds on Node 22. Windows keep the cost linear.
+ */
+const GRAPHEME_WINDOW = 1_024;
+
+/**
+ * Every grapheme boundary of `text` in ascending order, `text.length` included: the positions one
+ * Intl.Segmenter pass over the whole text yields. Each window resumes at the start of the previous
+ * window's last cluster, which may continue past that window. That start is a confirmed boundary:
+ * whether a cluster starts at a code point depends on that code point and the text before it, and no
+ * UAX #29 rule looks back across a boundary except regional-indicator pairing, whose count is even
+ * there. A window never ends inside a surrogate pair, whose lone half would read as another code
+ * point. A cluster filling a whole window makes the window grow; a grown window is read only until
+ * the next cluster starts, then normal windows resume. Iterating its short tail on Node 20 would
+ * otherwise copy that entire grown window for every cluster and reintroduce quadratic work.
+ */
+export function graphemeBoundaryPositions(text: string, window = GRAPHEME_WINDOW): number[] {
+  const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+  const positions: number[] = [];
+  let start = 0;
+  let size = window;
+  while (start < text.length) {
+    let end = Math.min(text.length, start + size);
+    if (withoutSurrogateSplit(text, end) !== end) {
+      end++;
+    }
+    const starts: number[] = [];
+    for (const { index } of segmenter.segment(text.slice(start, end))) {
+      starts.push(start + index);
+      if (size > window && starts.length === 2) {
+        break;
+      }
+    }
+    if (end < text.length && starts.length < 2) {
+      size *= 2;
+      continue;
+    }
+    if (size > window && starts.length === 2) {
+      positions.push(starts[0]!);
+      start = starts[1]!;
+      size = window;
+      continue;
+    }
+    const resume = end < text.length ? starts.pop()! : text.length;
+    for (const position of starts) {
+      positions.push(position);
+    }
+    start = resume;
+    size = window;
+  }
+  positions.push(text.length);
+  return positions;
 }
 
 /** Best cut in [from + half, limit]; always after `from`. */

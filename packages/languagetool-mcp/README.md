@@ -11,18 +11,23 @@ what to change belongs to the calling model or Skill.
 - Node.js ≥ 20 with a working `Intl.Segmenter` and ICU segmentation data (official
   full-ICU builds recommended). Builds without ICU are not supported; custom small-ICU
   or system-ICU builds must provide the required segmentation data.
-- A running LanguageTool HTTP server (installed separately, e.g. on `http://127.0.0.1:8081`).
-  Tested with LanguageTool 6.9-SNAPSHOT.
+  Node 20 and 22 are tested in CI with official builds.
+- A running LanguageTool HTTP server (installed separately, e.g. on `http://127.0.0.1:8081`),
+  which needs Java 17 or later. Tested with LanguageTool 6.9-SNAPSHOT. From the unzipped
+  LanguageTool directory: `java -cp languagetool-server.jar org.languagetool.server.HTTPServer --port 8081`.
 
 ## Build and run
 
 From the repository root:
 
 ```bash
-npm install
+npm ci
 npm run build
 node packages/languagetool-mcp/dist/index.js
 ```
+
+The package is a command (`languagetool-mcp`, i.e. `dist/index.js`), not a library: it has no
+importable API. It is not published on npm yet (see [docs/releasing.md](../../docs/releasing.md)).
 
 During development, `npm run dev -w @gasycoder/languagetool-mcp` runs the TypeScript sources with `tsx`.
 
@@ -399,12 +404,16 @@ From the repository root:
 ```bash
 npm test                    # unit and stdio tests, no LanguageTool server needed
 npm run test:integration    # optional, against LANGUAGETOOL_BASE_URL
+npm run pack:check          # pack, install the tarball in a temporary project, run its binary
+npm run check               # what CI runs: typecheck, test, build, pack:check
 ```
 
-`npm test` builds the package and runs `dist/index.js` as a subprocess, both with raw
-stdio framing in the 2025 handshake mode and with the official v2 client
-(`@modelcontextprotocol/client`, a dev dependency) pinned to protocol revision
-2026-07-28. The same scripts work from `packages/languagetool-mcp/`, or from the root with
+`npm test` builds the package and runs `dist/index.js` as a subprocess: with raw stdio
+framing, and with the official v2 client (`@modelcontextprotocol/client`, a dev dependency)
+on protocol revisions 2025-11-25 (legacy handshake) and 2026-07-28 (modern). It needs no
+network. `pack:check` installs the runtime dependencies, so it needs the npm registry or a
+warm npm cache. CI (`.github/workflows/ci.yml`) runs `npm run check`'s steps on Node 20 and
+22. The scripts also work from `packages/languagetool-mcp/`, or from the root with
 `-w @gasycoder/languagetool-mcp`.
 
 ## Source layout

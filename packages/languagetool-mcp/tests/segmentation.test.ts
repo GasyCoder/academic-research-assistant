@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { type Segment, type SegmentationOptions, segmentDocument } from '../src/segmentation.js';
+import { type Segment, type SegmentationOptions, graphemeBoundaryPositions, segmentDocument } from '../src/segmentation.js';
 
 const isHighSurrogate = (code: number) => code >= 0xd800 && code <= 0xdbff;
 const isLowSurrogate = (code: number) => code >= 0xdc00 && code <= 0xdfff;
@@ -8,6 +8,34 @@ const isLowSurrogate = (code: number) => code >= 0xdc00 && code <= 0xdfff;
 /** Positions where the text is cut: request edges and core edges. */
 function cuts(segments: Segment[]): number[] {
   return segments.flatMap((segment) => [segment.start, segment.end, segment.coreStart, segment.coreEnd]);
+}
+
+/**
+ * Global grapheme boundaries of `unit` repeated up to `length` code units. They are periodic, so one
+ * Intl.Segmenter pass over a few repetitions gives them, up to the last full repetition; a pass over
+ * the whole text would take seconds on Node 20. The end is segmented for real from there, since a
+ * repetition cut short can end with a lone surrogate that starts a cluster of its own.
+ */
+function periodicGraphemeBoundaries(unit: string, length: number): Set<number> {
+  const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+  const sample = Array.from(segmenter.segment(unit.repeat(4)), ({ index }) => index);
+  const period = (copy: number) =>
+    sample.filter((index) => index >= copy * unit.length && index < (copy + 1) * unit.length).map((index) => index - copy * unit.length);
+  expect(period(0)).toEqual(period(1));
+  expect(period(2)).toEqual(period(1));
+  expect(period(1)[0]).toBe(0);
+  const text = unit.repeat(Math.ceil(length / unit.length)).slice(0, length);
+  const tailStart = Math.max(0, (Math.floor(length / unit.length) - 1) * unit.length);
+  const boundaries = new Set([length]);
+  for (let base = 0; base < tailStart; base += unit.length) {
+    for (const offset of period(1)) {
+      boundaries.add(base + offset);
+    }
+  }
+  for (const { index } of segmenter.segment(text.slice(tailStart))) {
+    boundaries.add(tailStart + index);
+  }
+  return boundaries;
 }
 
 function expectInvariants(text: string, segments: Segment[], options: SegmentationOptions): void {
@@ -152,8 +180,7 @@ describe('segmentDocument', () => {
     'keeps all request and core edges on global grapheme boundaries: %s',
     (unit) => {
       const text = unit.repeat(Math.ceil(100_000 / unit.length)).slice(0, 100_000);
-      const boundaries = new Set(Array.from(new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(text), ({ index }) => index));
-      boundaries.add(text.length);
+      const boundaries = periodicGraphemeBoundaries(unit, text.length);
       for (const options of [
         { maxRequestLength: 50_000, contextLength: 1_000 },
         { maxRequestLength: 2_003, contextLength: 101 },
@@ -165,6 +192,17 @@ describe('segmentDocument', () => {
       }
     },
   );
+
+  it('segments a document at the limit in linear time on every supported runtime', () => {
+    // One grapheme per code unit is the worst case. Node 20's Intl.Segmenter costs time proportional
+    // to the input on every segment: one pass over such a text took over 10 s there.
+    const paragraphs = Array.from({ length: 1_800 }, (_, index) => `Paragraph ${index} describes the method in detail.`);
+    for (const text of ['x'.repeat(100_000), paragraphs.join('\n\n').slice(0, 100_000)]) {
+      const start = performance.now();
+      segmentDocument(text, { maxRequestLength: 50_000, contextLength: 1_000 }, 'en-US');
+      expect(performance.now() - start).toBeLessThan(2_000);
+    }
+  });
 
   it('makes progress when one grapheme exceeds the entire request budget', () => {
     const text = `a${'\u0301'.repeat(60_000)}${'x'.repeat(39_999)}`;
@@ -227,6 +265,78 @@ describe('segmentDocument', () => {
       const contextLength = Math.floor(random() * 30);
       const options = { maxRequestLength: 2 * contextLength + 2 + Math.floor(random() * 300), contextLength };
       expectInvariants(text, segmentDocument(text, options, pick(['en', 'fr', 'auto'])), options);
+    }
+  });
+});
+
+describe('graphemeBoundaryPositions', () => {
+  it.each([
+    `a${'\u0301'.repeat(1_100)}😀${'x'.repeat(1_100)}`,
+    `${'👩‍'.repeat(400)}👩${'x'.repeat(1_100)}`,
+    `${'क्'.repeat(600)}ष${'x'.repeat(1_100)}`,
+  ])('preserves whole-text boundaries when an expanded cluster has a short tail (%#)', (text) => {
+    const whole = Array.from(new Intl.Segmenter('en', { granularity: 'grapheme' }).segment(text), ({ index }) => index);
+    whole.push(text.length);
+    expect(graphemeBoundaryPositions(text)).toEqual(whole);
+  });
+
+  it.each([512, 1_024, 2_048])('bounds Node 20 copy work after a long cluster in %i units', (length) => {
+    const text = `a${'\u0301'.repeat(length / 2)}${'x'.repeat(length / 2 - 1)}`;
+    const window = 16;
+    const original = Intl.Segmenter.prototype.segment;
+    const expected = Array.from(new Intl.Segmenter('en', { granularity: 'grapheme' }).segment(text), ({ index }) => index);
+    expected.push(text.length);
+    let copiedUnits = 0;
+    // Node 20 copies the segmented input for every yielded cluster. Count that work instead
+    // of timing a large document: an expanded window must not yield an unbounded short tail.
+    const spy = vi.spyOn(Intl.Segmenter.prototype, 'segment').mockImplementation(function (this: Intl.Segmenter, input: string) {
+      const segments = original.call(this, input);
+      return {
+        *[Symbol.iterator]() {
+          for (const segment of segments) {
+            copiedUnits += input.length;
+            yield segment;
+          }
+        },
+      } as Intl.Segments;
+    });
+    try {
+      expect(graphemeBoundaryPositions(text, window)).toEqual(expected);
+      expect(copiedUnits).toBeLessThanOrEqual(4 * text.length * window);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  const cp = (...codes: number[]) => String.fromCodePoint(...codes);
+  // Units chosen for UAX #29 rules that look at more than two code points.
+  const pieces = [
+    'a', 'x', ' ', '.', '\r\n', '\n',
+    cp(0x1f1eb), cp(0x1f1f7), // regional indicators, paired by parity
+    cp(0x1f469, 0x200d, 0x1f469, 0x200d, 0x1f467), cp(0x200d), cp(0x1f44d, 0x1f3fd), cp(0x2708, 0xfe0f), // ZWJ, modifiers, VS16
+    cp(0x301), cp(0x301).repeat(20), // combining marks, including runs longer than small windows
+    cp(0x1100), cp(0x1161), cp(0x11a8), cp(0xac00), // Hangul L, V, T jamo and a syllable
+    cp(0x915, 0x94d, 0x937), cp(0x94d), cp(0x903), // Indic conjunct, virama, spacing mark
+    cp(0x600), // prepend
+    String.fromCharCode(0xd83d), String.fromCharCode(0xdc4d), // lone surrogates, as in malformed input
+  ];
+
+  it.each([1, 2, 3, 7, 64, 1_024])('finds the same boundaries as one whole-text pass, in windows of %i units', (window) => {
+    const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+    let seed = window;
+    const random = () => {
+      seed = (seed * 1_103_515_245 + 12_345) % 2_147_483_648;
+      return seed / 2_147_483_648;
+    };
+    for (let run = 0; run < 200; run++) {
+      let text = '';
+      const length = Math.floor(random() * 400);
+      while (text.length < length) {
+        text += pieces[Math.floor(random() * pieces.length)];
+      }
+      const whole = Array.from(segmenter.segment(text), ({ index }) => index);
+      whole.push(text.length);
+      expect(graphemeBoundaryPositions(text, window)).toEqual(whole);
     }
   });
 });

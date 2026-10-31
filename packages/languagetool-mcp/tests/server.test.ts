@@ -59,6 +59,9 @@ describe('MCP server', () => {
   it('identifies itself with the package version', async () => {
     const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
     expect(SERVER_VERSION).toBe(packageJson.version);
+    // One version for the repository, the package and the server (docs/releasing.md).
+    const rootPackageJson = JSON.parse(await readFile(new URL('../../../package.json', import.meta.url), 'utf8'));
+    expect(rootPackageJson.version).toBe(packageJson.version);
 
     const session = await connect(routeFetch({}));
     close = session.close;

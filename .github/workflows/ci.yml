@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Read-only: CI only checks out, installs and tests.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Node ${{ matrix.node-version }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        # engines.node is ">=20": the oldest and the current supported lines.
+        node-version: [20, 22]
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      # check_document segments text with Intl.Segmenter, which needs ICU.
+      - name: Show runtime
+        run: |
+          node -p "[process.version, 'ICU ' + process.versions.icu, 'Intl.Segmenter ' + typeof Intl.Segmenter].join(', ')"
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # Unit and stdio tests use synthetic LanguageTool servers: no Java needed.
+      # The tests against a real LanguageTool (npm run test:integration) are not run here.
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Check the npm package
+        run: npm run pack:check
