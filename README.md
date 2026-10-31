@@ -14,13 +14,13 @@ The project separates:
 
 ## Initial components
 
-Planned initial components:
+Initial components:
 
-- LanguageTool MCP server
-- Academic Writing Skill
-- Scientific Review Skill
-- Research Profile Skill
-- Citation Integrity Skill
+- LanguageTool MCP server (available)
+- Academic Writing Skill (available, see below)
+- Scientific Review Skill (planned)
+- Research Profile Skill (planned)
+- Citation Integrity Skill (planned)
 
 ## LanguageTool MCP server
 
@@ -82,11 +82,20 @@ Configuration, tools, limits, cold start and client setup in detail:
 ### Development
 
 ```bash
-npm run check              # what CI runs: typecheck, tests, build, npm package check
+npm run check              # what CI runs: skill validation, typecheck, tests, build, npm package check
 npm run test:integration   # against a real LanguageTool on LANGUAGETOOL_BASE_URL
 ```
 
 Versioning and releases: [docs/releasing.md](docs/releasing.md).
+
+## Academic Writing Skill
+
+[`skills/academic-writing`](skills/academic-writing/SKILL.md) reviews and improves scholarly
+prose in any discipline and language: clarity, precision, concision, coherence, register,
+argumentation and paragraph structure. It uses the LanguageTool MCP tools for linguistic
+diagnostics and keeps the academic judgement to itself. It preserves the author's meaning,
+numbers and citations, and never invents sources, data or findings. Manual validation
+scenarios are in [`evaluation/scenarios.md`](skills/academic-writing/evaluation/scenarios.md).
 
 ## Status
 
