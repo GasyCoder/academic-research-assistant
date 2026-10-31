@@ -8,7 +8,8 @@
   "additionalProperties": false,
   "patternProperties": {
     "^x-[a-z0-9-]+$": {
-      "description": "Local extension, ignored by the Skills unless the user explains it. Never store secrets here."
+      "description": "Root-level local extension, ignored unless the user explains it. Values are non-empty JSON data; omit unknown values. Never store secrets here.",
+      "$ref": "#/$defs/extensionValue"
     }
   },
   "properties": {
@@ -98,12 +99,12 @@
         "primary": {
           "description": "Primary language subtag, e.g. en or fr.",
           "type": "string",
-          "pattern": "^[a-z]{2,3}$"
+          "pattern": "^[A-Za-z]{2,3}$"
         },
         "variant": {
-          "description": "Full tag of a regional or other variant starting with primary, e.g. en-GB or fr-CA.",
+          "description": "Variant tag starting with primary (case-insensitive), e.g. en-GB or en-US-u-ca-gregory. Basic subtag syntax only, not full BCP 47 registry validation.",
           "type": "string",
-          "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})+$"
+          "pattern": "^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8})+$"
         },
         "source": { "$ref": "#/$defs/source" }
       }
@@ -228,6 +229,15 @@
     }
   },
   "$defs": {
+    "extensionValue": {
+      "anyOf": [
+        { "$ref": "#/$defs/text" },
+        { "type": "number" },
+        { "type": "boolean" },
+        { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/extensionValue" } },
+        { "type": "object", "minProperties": 1, "additionalProperties": { "$ref": "#/$defs/extensionValue" } }
+      ]
+    },
     "text": {
       "type": "string",
       "minLength": 1,

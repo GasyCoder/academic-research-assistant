@@ -110,7 +110,7 @@ test('accepts several methodology approaches, and requires notes for other', () 
 test('validates languages and variants', () => {
   valid('profileVersion: 1\nlanguage:\n  primary: fr\n');
   valid('profileVersion: 1\nlanguage:\n  primary: fr\n  variant: fr-CA\n');
-  invalid('profileVersion: 1\nlanguage:\n  primary: en\n  variant: fr-CA\n', /^\/language\/variant: must start with the primary language "en-"$/);
+  invalid('profileVersion: 1\nlanguage:\n  primary: en\n  variant: fr-CA\n', /^\/language\/variant: must start with the primary language/);
   invalid('profileVersion: 1\nlanguage:\n  primary: English\n', /^\/language\/primary: must match pattern/);
   invalid('profileVersion: 1\nlanguage:\n  variant: en-GB\n', /^\/language: must have required property 'primary'$/);
 });
@@ -155,6 +155,103 @@ test('rejects secret-like keys and values without echoing them', () => {
   const secret = `sk-${'a1B2c3D4'.repeat(4)}`;
   const problems = invalid(`profileVersion: 1\nproject:\n  topic: "${secret}"\n`, /^\/project\/topic: value looks like a secret$/);
   assert.ok(problems.every((problem) => !problem.includes(secret)));
+});
+
+test('handles unresolved, cyclic and excessive aliases without throwing or echoing input', () => {
+  const marker = `sk-${'SYNTHETIC'.repeat(4)}`;
+  for (const body of [
+    `x-team: *${marker}\n`,
+    'x-team: &self {again: *self}\n',
+    `x-first: &first [a, b]\nx-second: &second [${Array(12).fill('*first').join(', ')}]\nx-third: [${Array(12).fill('*second').join(', ')}]\n`,
+  ]) {
+    const problems = invalid(`profileVersion: 1\n${body}`, /\(yaml\)/);
+    assert.ok(problems.every((problem) => !problem.includes(marker)));
+  }
+  valid('profileVersion: 1\nx-first: &first {label: Shared context}\nx-second: *first\n');
+});
+
+test('rejects unsupported tags, YAML 1.1, collection keys and non-finite numbers', () => {
+  for (const text of [
+    'profileVersion: 1\nx-team: !academic ordinary text\n',
+    'profileVersion: 1\nx-team: !!int not-an-integer\n',
+    'profileVersion: 1\nx-team: !!binary aGVsbG8=\n',
+    '%YAML 1.1\n---\nprofileVersion: 1\nx-team: yes\n',
+    'profileVersion: 1\nx-team: {? [first, second]: text}\n',
+    'profileVersion: 1\nx-team: .nan\n',
+    'profileVersion: 1\nx-team: .inf\n',
+  ]) invalid(text, /\(yaml\)/);
+});
+
+test('detects credential key components without rejecting academic vocabulary', () => {
+  for (const key of ['apiKey', 'api_key', 'api-key', 'token', 'accessToken', 'password', 'secret', 'clientSecret', 'privateKey', 'databasePassword']) {
+    invalid(`profileVersion: 1\nx-provider:\n  ${key}: synthetic-value\n`, /secrets must not be stored/);
+  }
+  for (const key of ['secretary', 'tokenization', 'passwordPolicy']) {
+    valid(`profileVersion: 1\nx-project:\n  ${key}: Academic context\n`);
+  }
+  valid('profileVersion: 1\nproject:\n  topic: The concept of a secret in API design\n');
+});
+
+test('checks credential values in extensions and notes, and redacts credential-shaped keys', () => {
+  const marker = `sk-${'SYNTHETIC'.repeat(4)}`;
+  for (const body of [
+    `x-provider: {nested: {value: '${marker}'}}\n`,
+    `venue: {styleNotes: ['${marker}']}\n`,
+    `project: {topic: '${marker}'}\n`,
+    `${marker}: some text\n`,
+    `x-provider: {'${marker}': some text}\n`,
+  ]) {
+    const problems = invalid(`profileVersion: 1\n${body}`, /secret|redacted/);
+    assert.ok(problems.every((problem) => !problem.includes(marker)));
+  }
+});
+
+test('extensions obey the same non-empty unknown contract, while false remains a value', () => {
+  for (const value of ['null', '""', '[]', '{}', '{note: null}', '[[]]']) {
+    invalid(`profileVersion: 1\nx-context: ${value}\n`, /\/x-context/);
+  }
+  valid('profileVersion: 1\nx-context: {enabled: false, count: 0, notes: [Local context]}\n');
+  invalid('profileVersion: 1\nproject: {x-context: Local context}\n', /unknown key/);
+});
+
+test('accepts case-insensitive language prefixes and complex variant subtags without coercion', () => {
+  for (const [primary, variant] of [['en','en-US'], ['en','en-GB'], ['fr','fr-FR'], ['pt','pt-BR'], ['EN','en-gb'], ['en','EN-us'], ['en','en-US-u-ca-gregory'], ['zh','zh-Hant-TW'], ['en','en-x-project']]) {
+    valid(`profileVersion: 1\nlanguage: {primary: ${primary}, variant: ${variant}}\n`);
+  }
+  invalid('profileVersion: 1\nlanguage: {primary: en, variant: enx-US}\n', /must start with the primary language/);
+});
+
+test('rejects conflicting or repeated abbreviation entries', () => {
+  for (const expansion of ['First meaning', 'Second meaning']) {
+    invalid(`profileVersion: 1\nterminology:\n  abbreviations:\n    - {abbreviation: ABC, expansion: First meaning}\n    - {abbreviation: ABC, expansion: '${expansion}'}\n`, /duplicate abbreviation/);
+  }
+});
+
+test('requires a real calendar date for venue guidelines', () => {
+  invalid('profileVersion: 1\nvenue: {guidelinesCheckedOn: 2026-02-31}\n', /valid calendar date/);
+  valid('profileVersion: 1\nvenue: {guidelinesCheckedOn: 2024-02-29}\n');
+});
+
+test('the CLI handles missing files, directories, spaces and unsafe YAML without a stack trace', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'research-profile-cli-'));
+  try {
+    const good = join(directory, 'profile with spaces.json');
+    const unsafe = join(directory, 'unsafe.yaml');
+    const missing = join(directory, 'absent.yaml');
+    const marker = `sk-${'SYNTHETIC'.repeat(4)}`;
+    writeFileSync(good, '{"profileVersion":1}');
+    writeFileSync(unsafe, `profileVersion: 1\nx-context: *${marker}\n`);
+    const result = spawnSync(process.execPath, [validator, missing, directory, unsafe, good], {encoding: 'utf8'});
+    assert.ifError(result.error);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /file not found/);
+    assert.match(result.stderr, /unable to read profile/);
+    assert.match(result.stdout, /profile with spaces\.json: valid/);
+    assert.ok(!result.stderr.includes(marker));
+    assert.ok(!/\n\s+at /.test(result.stderr));
+  } finally {
+    rmSync(directory, {recursive:true, force:true});
+  }
 });
 
 test('the command validates the given files and fails with their path', () => {
