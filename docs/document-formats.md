@@ -87,6 +87,8 @@ withheld as a whole. Link labels may be prose. Numeric markers, author-year pare
 year parentheses and Pandoc `[@key]` syntax are retained and excluded conservatively.
 This heuristic can withhold ordinary bracketed numbers; it does not find every possible
 citation convention. Math protection is conservative, not a Markdown math renderer.
+Dollar signs inside already protected code or destinations do not delimit surrounding math.
+Empty YAML frontmatter is valid; inline as well as block nesting is bounded during traversal.
 
 LaTeX citation keys (`cite`, `citep`, `citet`, `parencite` and related braced variants), refs,
 labels, commands and arguments remain source. Only a small allowlist of formatting commands
@@ -105,6 +107,9 @@ input as protected source, even when they occur in a preamble. This prevents lat
 redefined formatting commands from being treated as ordinary visible prose. Such documents
 need manual review of the withheld source. Packages and arbitrary macro-generated syntax
 are not interpreted; never claim exhaustive active-text recognition for arbitrary TeX.
+Optional arguments respect brace-grouped brackets. Opaque environment scanning skips literal
+terminators inside supported verbatim constructs. Control words use default letter catcodes;
+`makeatletter`/`makeatother` conservatively stop extraction rather than changing tokenization.
 
 DOCX visible text is split by original run/text-node boundaries. Direct formatting metadata
 is descriptive; inherited or theme formatting is not resolved. Fields and instruction text,
@@ -113,6 +118,10 @@ drawings and equations are withheld or represented by object markers. Hyperlinks
 followed. Caption numeric prefixes are protected when recognisable; field-generated numbers
 remain protected fields. Graphics content is not analysed. Unread parts and missing note
 content produce coverage limitations. No external part or linked resource is fetched.
+Historical property-change records never override current styles or add visible characters.
+Note relationship ids resolve in their own part, not against main-document relationships.
+Special-character elements that are not decoded retain protected object markers and an
+explicit omission. Core metadata shares the aggregate extracted-text budget with body/notes.
 
 ## Mapping and proposals
 
@@ -124,8 +133,13 @@ submission. This layer neither calls LanguageTool nor retries it.
 For Markdown/LaTeX a segment is an unchanged contiguous source slice: markup removal
 never creates an invented global mapping. Units and segment ranges index the decoded string
 in UTF-16, not UTF-8 file bytes. Byte input uses strict UTF-8 decoding, including standard BOM
-handling. For DOCX, XML entities are decoded; `part`, paragraph path, `run`, `textNode` and
+handling. A leading BOM in a string is retained as protected source, including before
+Markdown frontmatter. For DOCX, XML entities are decoded; `part`, paragraph path, `run`, `textNode` and
 node-local UTF-16 range locate the passage, never an offset into serialized XML or ZIP data.
+DOCX paths and run/text-node ordinals enumerate the reader's supported traversal, excluding
+opaque revision/control subtrees. They are inspection coordinates, not raw DOM descendant
+indices or XPath expressions. Resolve them through the same reader and snapshot; do not
+index all XML descendants with these numbers or use them for direct XML patching.
 
 `mapFinding` checks the revision, authentic in-memory snapshot, segment, bounds, integer
 offsets and grapheme boundaries. Snapshots are frozen; JSON deserialization does not recreate
@@ -149,7 +163,7 @@ Limits are workload bounds for local inspection, not disciplinary manuscript lim
 - Text: 2,000,000 UTF-16 units for string input; 2,000,000 bytes for byte input, with decoded
   text also bounded. Split larger documents by supplied sections and state partial coverage.
 - DOCX archive: 20 MiB; at most 2,000 entries; 8 MiB uncompressed per entry; 40 MiB total
-  declared expanded bytes. Only six allowlisted parts are decompressed, with actual stream
+  declared expanded bytes. Only eight allowlisted parts are decompressed, with actual stream
   lengths bounded and checked against declarations. Extracted text is bounded to 2,000,000 units.
 - At most 50,000 units/segments; XML depth at most 256; deeply nested Markdown is withheld
   once traversal reaches its limit. Input is buffered within these limits, not streamed from disk.

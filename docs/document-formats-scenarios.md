@@ -157,3 +157,44 @@ This was one agent pass plus a recheck, not a blind benchmark or a guarantee of 
 recognition. DOCX security and structure were exercised by synthetic automated tests rather
 than that agent's forward review. The package tests also reject stale/forged mappings and
 interior grapheme boundaries. A later independent audit remains necessary.
+
+## Independent audit hardening — 2026-10-31
+
+Two separate read-only agents and the primary audit exercised new synthetic inputs without
+external services. The original 35 tests passed, while 16 initial regression assertions
+demonstrated protection, structure and resource-budget defects. The targeted fixes and
+follow-up variants now have 26 additional tests, for 61 passing format tests in four files.
+
+| Area | Demonstrated defect and regression |
+| --- | --- |
+| Markdown protection | Dollars in inline code or link destinations could pair with actual math delimiters, exposing math as prose; existing exclusions now isolate delimiter scanning |
+| Frontmatter | Empty YAML frontmatter was treated as unclosed; a string BOM displaced Markdown positions and classification; both LF/CRLF cases retain correct source ranges |
+| Markdown nesting | Deep inline emphasis exhausted recursive traversal; inline traversal is now iterative and bounded, with an explicit omission |
+| LaTeX options | A bracket inside a braced optional argument ended protection early and exposed a citation key; brace groups now keep those brackets literal |
+| LaTeX environments | Literal terminators inside inline or nested verbatim could close an opaque figure early; supported literal constructs now remain opaque, including `@` delimiters |
+| DOCX history | Historical run/paragraph properties could override current hidden/style state; their subtrees are skipped without adding visible markers |
+| Note links | Note-local relationship ids incorrectly used main-document targets; relationships now resolve per owning part |
+| Resource budget | Core metadata was bounded per field instead of in aggregate; it now consumes the body/notes text budget |
+| Special characters | Visible special-character elements disappeared silently; protected object markers and coverage now retain their presence |
+| Caption labels | Bookmark markers before/within a caption prefix prevented numeric-label protection; prefix detection now tolerates those object markers |
+
+Follow-up evaluation caught two issues before completing the audit: `@` as an ordinary TeX
+verbatim delimiter, and visible markers inserted for historical formatting records. Those
+markers could defeat caption-prefix and cross-run grapheme protection. Both were reproduced
+with failing tests before correction. Independent replays then confirmed the protected
+content stayed out of prose, note targets were correct, metadata overflow was rejected, and
+caption/grapheme boundaries remained intact.
+
+The audit also clarified that DOCX path/run/text-node ordinals enumerate supported reader
+traversal, not arbitrary raw XML descendant indices. They must not be used for direct XML
+patching. The package still has no document writer or round-trip guarantee.
+
+A near-limit 2,000,000-unit Markdown probe returned one unit and fifty prose segments without
+truncation; one additional character failed with `LIMIT_EXCEEDED`. Its observed local run
+took about two seconds and 208 MiB peak resident memory, including the TypeScript loader;
+this is a workload observation rather than a general performance benchmark. CRLF, BOM,
+Unicode, stale snapshots, protected-range conflicts, ZIP/XML rejection and PDF refusal were
+also checked. The readers made no external calls and changed no original document bytes.
+
+The [independent audit report](document-formats-audit.md) records the complete review,
+severity classification, exact validation results and remaining limits.
