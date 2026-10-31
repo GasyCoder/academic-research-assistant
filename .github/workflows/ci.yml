@@ -50,6 +50,9 @@ jobs:
       - name: Validate research profiles
         run: npm run validate:profiles
 
+      - name: Validate discipline profiles
+        run: npm run validate:disciplines
+
       - name: Typecheck
         run: npm run typecheck
 

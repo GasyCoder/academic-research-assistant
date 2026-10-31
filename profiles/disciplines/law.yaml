@@ -1,0 +1,23 @@
+disciplineProfileVersion: 1
+id: law
+label: Law
+description: Project-maintained generic guidance for legal scholarship, sensitive to the stated jurisdiction and method; no legal advice or regulatory requirements.
+aliases: [legal studies, legal scholarship]
+writing:
+  - Distinguishing description, interpretation and a normative proposal may help readers follow a legal argument.
+  - Explain jurisdiction-dependent terms where needed without substituting concepts from an assumed legal system.
+structure:
+  - Doctrinal work may connect a question, authorities, interpretive reasoning and conclusions using issue-based sections.
+  - Comparative, theoretical, historical or empirical legal work may organize its argument differently, depending on the method and venue.
+methodology:
+  - If doctrinal analysis is used, explaining the selection and interpretation of authorities may help readers follow the reasoning.
+  - Do not assume that all legal scholarship is doctrinal, or impose a jurisdiction, legal system, statistical method or universal source hierarchy.
+evidence:
+  - Statutes, cases and other authorities may matter where applicable; observations, interviews and conceptual arguments may also be relevant.
+  - Distinguish the text of an authority from the manuscript's interpretation; current legal status cannot be established from this profile.
+citations:
+  - Note-based and other citation systems may appear; the supplied style and venue or document requirements decide.
+  - Preserve visible authorities and locators without inventing legal citations, resolving their current status or treating citation form as proof of authority.
+review:
+  - Where an authority is central, does the supplied text explain how the stated interpretation relates to it?
+  - If a conclusion extends across jurisdictions or periods, does the manuscript supply a basis for that scope?

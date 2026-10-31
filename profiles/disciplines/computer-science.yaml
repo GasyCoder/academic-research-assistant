@@ -1,0 +1,23 @@
+disciplineProfileVersion: 1
+id: computer-science
+label: Computer Science
+description: Project-maintained generic guidance for computing research, conditional on the contribution, method and venue.
+aliases: [computer science, computing, informatics]
+writing:
+  - Distinguishing a problem, proposed contribution and evaluation claim may help readers follow systems, software engineering or algorithm papers.
+  - Where technical terms have several meanings, define their use while preserving the project's declared terminology.
+structure:
+  - Systems and software papers may describe architecture, design choices and evaluation; their order depends on the contribution.
+  - Theoretical work may follow definitions, assumptions, proofs and implications; empirical work may use an IMRaD pattern or another venue structure.
+methodology:
+  - If computational experiments are reported, implementation details, configurations and evaluation conditions may help readers interpret them.
+  - Experiments, datasets and benchmarks are not universal requirements; theoretical, methodological and interpretive work may use other approaches.
+evidence:
+  - Proofs, analyses, datasets, benchmarks, observations and case studies may provide different kinds of evidence, depending on the claim.
+  - Where performance comparisons are made, consider whether workloads, baselines and conditions are described; benchmark performance alone need not imply general superiority.
+citations:
+  - Numeric and author-date systems may be encountered; the user's declared style and supplied venue or document requirements decide.
+  - Where software, datasets or versions are cited, retain visible identifiers without inventing missing metadata or certifying availability.
+review:
+  - If performance claims are central, is the evaluation evidence described in the supplied text?
+  - For a theoretical contribution, are the stated assumptions and the scope of the conclusion connected?

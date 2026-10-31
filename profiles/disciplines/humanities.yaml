@@ -1,0 +1,23 @@
+disciplineProfileVersion: 1
+id: humanities
+label: Humanities
+description: Project-maintained generic guidance for interpretive, historical, theoretical and other humanities approaches, including quantitative or mixed work where applicable.
+aliases: [humanistic studies]
+writing:
+  - Making interpretive steps and the relation between a passage and an argument explicit may help readers follow the reasoning.
+  - Context-dependent terms may need explanation; preserve the author's declared conceptual vocabulary and voice.
+structure:
+  - An argument may develop through themes, periods, texts, concepts or cases rather than an IMRaD sequence.
+  - Empirical, quantitative or mixed work may use methods and results sections where appropriate to its question and venue.
+methodology:
+  - Textual interpretation, historical analysis, theoretical reasoning and empirical approaches may involve different reporting considerations.
+  - Where sources or a corpus are selected, explaining selection and context may help; do not presume that humanities work excludes quantitative methods.
+evidence:
+  - Primary and secondary sources, passages, artifacts, archives, datasets and conceptual arguments may play different evidential roles.
+  - Consider how supplied context and alternative readings limit an interpretation, without inventing consensus or requiring a universal evidential hierarchy.
+citations:
+  - Notes, author-date and other systems may appear; the declared style and document or venue requirements take precedence.
+  - Where editions, translations or source layers matter, preserve visible distinctions and ask about unresolved attribution.
+review:
+  - Does the supplied text connect its interpretation to the passages or premises it presents?
+  - Where a contextual claim matters, is its relationship to the stated material clear?

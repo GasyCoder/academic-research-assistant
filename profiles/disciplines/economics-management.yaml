@@ -1,0 +1,23 @@
+disciplineProfileVersion: 1
+id: economics-management
+label: Economics and Management
+description: Project-maintained generic guidance for economic and organizational research across empirical and conceptual approaches.
+aliases: [economics and management, economics, management]
+writing:
+  - Distinguishing constructs, measures and interpretations may help readers follow economic or organizational arguments.
+  - Where terms have everyday and technical meanings, clarify their local use without overriding the project's terminology.
+structure:
+  - Empirical papers may connect a question, conceptual framing, methods, findings and interpretation in an IMRaD or alternative structure.
+  - Conceptual frameworks, qualitative accounts and case studies may organize an argument around propositions, themes or cases.
+methodology:
+  - Quantitative, qualitative, mixed and conceptual approaches may be relevant depending on the question; econometrics and statistical hypotheses are not universal requirements.
+  - Where interviews or cases are used, recruitment, context and the analytic approach may help explain how interpretations were developed.
+evidence:
+  - Models, interviews, observations, documentary materials and numerical analyses may support different claims.
+  - When causal or general claims are made, consider the stated design and scope rather than imposing a method from the discipline label.
+citations:
+  - Author-date systems are common in some subfields; a declared numeric or other style takes precedence.
+  - Preserve distinctions between an original framework and later applications when the supplied citations make that relationship visible.
+review:
+  - Where a construct is central, does the supplied text explain how it is used or interpreted?
+  - For a case-based argument, do conclusions retain the stated organizational context and limits?
