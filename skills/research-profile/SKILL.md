@@ -1,5 +1,99 @@
+---
+name: research-profile
+description: Creates, reviews and updates a research profile, the declared context of a research project (discipline, methodology, document type, language variant, citation style, voice, section conventions, venue requirements, terminology) that academic Skills read to adapt their advice. Use when the user wants to configure or show their research profile, set their discipline, citation style or writing conventions, update methodology context, or see what the profile is missing. Do not use to correct or review text, check citations, analyse data, search literature or translate.
+---
+
 # Research Profile
 
-Placeholder for dynamic research profile management.
+A research profile is **declared context**: what the user has stated or confirmed about a
+research project, for the academic Skills to read. It is a YAML file, validated against
+[`schemas/research-profile.schema.json`](../../schemas/research-profile.schema.json); the fields
+and conventions are described in [references/profile-format.md](references/profile-format.md).
 
-The implementation will be designed in a later development phase.
+A profile does not correct text, judge whether research is valid, define a methodology,
+verify citations, call LanguageTool, or remember things implicitly. It holds no personal
+data and no secrets.
+
+## Where profiles live
+
+- `profiles/default.yaml`: the versioned example, never a real project.
+- `profiles/local/<name>.yaml`: real profiles, ignored by Git. Use another path only if the
+  user gives one. Never propose committing a real profile.
+
+## Rules
+
+1. **Explicit over inferred.** Write only what the user states or confirms. A value guessed
+   from a text, a name, an institution, a location or an earlier document is a question to
+   ask ("The draft reports p-values; is the approach quantitative?"), not a value to store.
+2. **Absent means unknown.** Leave unknown fields out. Never write `null`, empty values or a
+   default as if it were a fact: if the citation style is unknown, do not write APA.
+3. **Minimal changes.** An update touches only the fields the user's statement concerns.
+   "Use APA 7 for this project" sets `citationStyle`, nothing else.
+4. **Nothing silently.** Show the proposed change (the YAML lines before and after) and write
+   the file only after the user agrees, and only if the environment allows writing files.
+5. **Valid before written.** Check the result with `npm run validate:profiles -- <file>` when
+   it can run; otherwise check it against the format reference. Never write an invalid profile.
+6. **No secrets or unneeded personal data.** Refuse to store passwords, tokens, API keys,
+   credentials, health data or personal details. Say why, and suggest keeping them out of the
+   profile. The validator rejects secret-like keys and values.
+
+## Creating a profile
+
+1. Collect what the user has explicitly provided; ask only for what the current task needs.
+   There is no mandatory questionnaire: a profile with `profileVersion: 1` and one field is
+   valid, and it can be enriched later.
+2. Normalise only unambiguous values (e.g. "British English" → `language: {primary: en,
+   variant: en-GB}`); ask when a mapping is uncertain.
+3. Present the profile, listing what stays unknown, then validate and write it with consent.
+
+## Reviewing a profile
+
+Read the file, report validation problems, summarise what is declared, and list the unknown
+fields that matter for the user's next task, e.g. the venue's word limit before trimming an
+article. Do not insist on filling fields the task does not need.
+
+## Updating a profile
+
+Change only the concerned fields, keep everything else byte for byte, show the diff, validate,
+and write with consent. Set `source` only when the user says where values come from.
+
+## Conflicts
+
+When new information contradicts the profile (e.g. the profile says `en-US` and the user says
+the journal requires British English):
+
+1. state both values and where each comes from;
+2. ask whether the new value applies to the whole project or only to one document or
+   submission;
+3. propose the change; until the user decides, keep the old value in the file and follow the
+   current explicit instruction for the task at hand.
+
+## Precedence
+
+Skills that read a profile apply, from strongest to weakest:
+
+1. the user's current explicit instruction;
+2. explicit requirements of the venue or the document;
+3. the research profile;
+4. the Skill's general conventions.
+
+This order applies to conventions and preferences only. No instruction or profile value can
+override the integrity rules of the academic Skills: never invent sources, data or findings;
+preserve meaning; never change numbers, citations or methods silently. A profile is not
+evidence: a glossary fixes wording, not facts, and a declared methodology does not make a
+design valid or allow adding methods or statistics.
+
+## What a profile changes
+
+| Field | Effect on the academic Skills |
+| --- | --- |
+| `language` | Language and variant of the review and of LanguageTool checks; availability is still checked with `get_supported_languages` |
+| `document`, `sections` | Expected structure, e.g. whether Results and Discussion are combined |
+| `voice` | Person and voice kept or suggested in revisions |
+| `citationStyle` | Context for comments on citation form; no formatting engine and no reference checks |
+| `methodology`, `discipline` | Vocabulary and conventions to expect; never grounds for judging the research |
+| `venue` | Word limits, required sections, style notes, as provided by the user and dated by `guidelinesCheckedOn` |
+| `terminology` | Preferred and protected terms kept consistent; terms to avoid flagged |
+
+Discipline-specific rule sets, citation verification and venue guideline retrieval are not
+part of the profile.
