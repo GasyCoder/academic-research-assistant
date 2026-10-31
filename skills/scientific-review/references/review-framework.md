@@ -3,6 +3,8 @@
 Detailed checks for steps 3 to 5 of the [Scientific Review workflow](../SKILL.md#workflow).
 Apply only the checks that the sections provided allow, in the logic of the study's own
 approach. Every check yields a finding with evidence and a status, or nothing.
+Apply [severity](../SKILL.md#severity) independently of status: absence from an excerpt is
+normally an ungraded coverage limit, not an important or critical defect.
 
 ## Argument chains
 
@@ -59,6 +61,8 @@ The most important link. Look for a conclusion that:
 - adds causality to an association or a sequence;
 - generalises beyond the sample, setting, period or conditions studied;
 - turns a non-significant result into the absence of an effect;
+- drops an approximation qualifier: ask about intended precision rather than treating a
+  possibly rounded percentage as automatically contradictory or silently changing it;
 - drops a limitation stated earlier, or changes the degree of certainty.
 
 Quote both the result and the conclusion. Example:
@@ -72,12 +76,14 @@ Quote both the result and the conclusion. Example:
 When both are provided, compare objective, method, population or sample, principal results,
 critical numbers and conclusions. Report different numbers, a different objective, a stronger
 conclusion or a differently described method, quoting both places. Do not assume information
-the body does not give.
+the body does not give. An abstract can omit body details without contradicting them; normal
+brevity alone is not a finding.
 
 ## Numerical and factual consistency
 
 - Compare sample sizes, percentages, dates, periods, group sizes and reported statistics
-  between sections.
+  between sections. First identify whether they concern the same measure, denominator,
+  population, period and analysis; a recruited sample and an analysed sample can differ.
 - Before calling a difference a contradiction, consider explanations the text may allow:
   exclusions or attrition, subsamples, different time points, different analyses, rounding.
   If none is stated, ask ("Results report N = 118 against N = 120 in Methods; were two

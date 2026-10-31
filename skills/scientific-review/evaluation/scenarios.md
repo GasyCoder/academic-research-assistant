@@ -28,6 +28,13 @@ and ask whether the design supports a causal claim.
 
 Forbidden: declaring the study invalid; recomputing or reinterpreting the coefficient.
 
+Meaning-preservation variants: compare *may improve* → *improves*, *in this sample* →
+*all participants everywhere*, and *no statistically significant association* → *no association*.
+Quote the changed qualifier or scope and explain the interpretation at risk; do not invent
+supporting analyses or silently rewrite either statement. For *approximately 30%* → *30%*,
+notice the precision change and ask whether the conclusion still uses a rounded value or
+asserts exactness; do not automatically label it a critical numerical contradiction.
+
 ## C. Sample mismatch
 
 > Methods: 120 participants were recruited. Results: data from 118 participants were analysed.
@@ -42,11 +49,28 @@ or fraud.
 
 Only an Introduction and a Results section are provided.
 
+Introduction: "We ask whether completion times differ across three scheduling conditions."
+Results: "Mean completion times were 12, 14 and 15 minutes in conditions A, B and C,
+respectively." No other text is supplied.
+
 Expected: coverage lists the sections reviewed and not provided; states that question-method,
 method-results and results-conclusion links cannot be assessed; reviews what the two sections
 allow (e.g. whether the results address the stated question).
 
-Forbidden: "the method is weak" or "the study has no conclusion"; any global verdict.
+Forbidden: "the method is weak" or "the study has no conclusion"; any global verdict;
+assigning important or critical severity merely because variability estimates, Methods,
+Discussion or Conclusions are not provided. There is no visible significance or stability
+claim here requiring a finding about variability.
+
+Impact variants:
+
+- Methods explicitly promise variability estimates in Results, but the provided complete
+  Results state that only means are reported: a reporting finding may be important if its
+  impact on interpreting a stated claim is explained. Quote the promise and the reporting
+  statement; never infer that the analysis was not performed.
+- Results say "completion times varied widely across participants" and Conclusion says
+  "completion times were uniform across those same participants": this visible conflict,
+  unlike absent variability estimates, can justify a substantive severity according to impact.
 
 ## E. Qualitative study
 
@@ -56,13 +80,20 @@ Forbidden: "the method is weak" or "the study has no conclusion"; any global ver
 Expected: reviews in the logic of the approach: whether the analytic process is described
 clearly enough to follow, whether themes are supported by the quoted material, and whether
 claims stay within the interview sample.
+If the process or actual illustrative quotations are not supplied, mark the corresponding
+assessment as unavailable, not as an established defect. Saturation, reflexivity and a
+particular coding procedure are not universal requirements for every qualitative approach.
 
 Forbidden: asking for p-values, a power calculation, statistical significance or a larger
 sample as defects.
 
 ## F. Theoretical paper
 
-A conceptual argument: definitions, premises, reasoning and propositions; no data.
+Definitions: "Call a procedure open if every affected party has an opportunity to respond."
+Premise: "Rule R gives every affected party an opportunity to respond."
+Proposition: "Rule R is open in the defined sense."
+Implication: "This establishes only openness in this stipulated sense, not the overall
+fairness of Rule R." No empirical data are supplied or claimed.
 
 Expected: follows the chain problem → premises → reasoning → propositions → implications;
 checks that propositions follow from the stated premises and that implications do not exceed
@@ -76,13 +107,26 @@ Profile: `methodology: {approaches: [qualitative]}`, `sections: {resultsAndDiscu
 combined}`, `venue: {abstractWordLimit: 200}`. The manuscript reports a survey with
 percentages.
 
-Expected: uses the profile to avoid quantitative expectations and to accept a combined Results
-and Discussion; notes, as a question, that the manuscript appears to include a quantitative
+Expected: accepts a combined Results and Discussion and does not impose a checklist merely
+from the profile's label. Examines the quantitative statements actually visible against the
+manuscript's own criteria; notes, as a question, that it appears to include a quantitative
 component the profile does not declare; treats the abstract limit as a user-provided
 requirement.
 
 Forbidden: stating that the study is a valid qualitative study because of the profile;
 updating or creating the profile.
+
+Conflict variant:
+
+Methods: "Survey responses were analysed using linear regression with completion time as
+the outcome. Statistical significance was defined as p < .01."
+Results and Discussion: "The regression coefficient was β = 0.12, p = .04. This coefficient
+was statistically significant under the stated criterion."
+
+Expected: quotes the threshold, p-value and significance statement as an internal
+contradiction, with severity justified by its role in interpretation. The qualitative profile
+must not suppress this check. No threshold, model or statistic is recalculated or invented.
+The profile/text difference remains a clarification question, not a verdict or a profile update.
 
 ## H. Citation boundary
 

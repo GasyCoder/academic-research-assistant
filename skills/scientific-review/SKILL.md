@@ -1,6 +1,6 @@
 ---
 name: scientific-review
-description: Reviews the scientific structure and internal consistency of a manuscript, thesis chapter or set of sections - alignment between research question, objectives, methods, results, discussion and conclusions, scope of claims, transparency of limitations, cross-section and numerical consistency, and information missing for assessment. Evidence-bound, it judges only what the provided text shows and gives no verdict on validity. Use for scientific structure, consistency, methods presentation, results-discussion or conclusion reviews, limitation checks and pre-submission reviews. Do not use for proofreading or rewriting, research-profile management, citation or DOI verification, statistical analysis, literature search or code.
+description: Reviews the scientific structure and internal consistency of a manuscript, thesis chapter or set of sections - alignment between research question, objectives, methods, results, discussion and conclusions, scope of claims, transparency of limitations, cross-section and numerical consistency, and information missing for assessment. Evidence-bound, it judges only what the provided text shows and gives no verdict on validity. Use for scientific structure, consistency, methods presentation, results-discussion or conclusion reviews, limitation checks and pre-submission reviews. Do not use for wording, clarity, generic paragraph review, proofreading or rewriting, research-profile management, citation or DOI verification, statistical analysis, literature search or code.
 ---
 
 # Scientific Review
@@ -23,6 +23,8 @@ discipline, methodology and language, and judges only the text provided.
 When a finding is mainly about wording, do not analyse it here: note briefly that a writing
 review may help ("several sentences reduce clarity; an Academic Writing review is advised").
 This Skill does not run statistics, retrieve literature, verify sources or edit the text.
+A bare "Review this paragraph" normally belongs to Academic Writing. Use this Skill for a
+targeted passage when the request concerns claim/evidence alignment or scientific interpretation.
 
 ## Evidence-bound review
 
@@ -31,15 +33,17 @@ has one assessment status:
 
 | Status | Meaning | Example wording |
 | --- | --- | --- |
-| Contradiction | Two quoted statements cannot both hold as written | "Methods give N = 120 participants; Results analyse N = 118, with no exclusion stated." |
-| Possible inconsistency | Statements seem incompatible, but context not shown could explain them | "This may reflect exclusions; please state them." |
+| Contradiction | Two quoted statements about the same quantity or claim and scope cannot both hold as written | "Abstract gives 74%; Results give 47% for the same respondents, question and time point." |
+| Possible inconsistency | Statements seem incompatible, but a plausible difference in scope or context could explain them | "Methods recruit 120; Results analyse 118. This may reflect exclusions; please clarify." |
 | Unclear | Present but ambiguous | "The comparison group is not clearly defined." |
 | Not provided | Absent from the text provided | "The sampling procedure is not described in the provided text." |
-| Cannot assess | Needs data, sources or expertise beyond the text | "Whether the instrument is validated cannot be assessed from the text." |
+| Cannot assess | A relation or judgement needs missing sections, data, sources or expertise | "Question-method alignment cannot be assessed because no method description was provided." |
 
 **Absence from the text is not absence from the study.** Write "not described in the provided
 text", never "the study did not...". Use statuses in words; never attach numerical
 probabilities or confidence percentages.
+Status describes the nature and evidential basis of the observation; severity describes its
+demonstrated impact. Coverage limits are not automatically defects requiring a severity.
 
 ## No verdicts
 
@@ -68,7 +72,8 @@ Infer the mode from the request; adapt depth to the text provided.
 ## Workflow
 
 1. **Establish coverage.** List the sections provided and those not provided, and whether a
-   research profile is used. A link involving a section not provided cannot be assessed.
+   research profile is used. A link whose required information is not provided cannot be
+   assessed; use the document's own headings rather than requiring named IMRaD sections.
 2. **Map the argument** with locations: question, objectives, hypotheses or claims (as stated);
    method elements; results; interpretations; conclusions; stated limitations; key numbers.
    Never create an element the text does not state.
@@ -80,7 +85,8 @@ Infer the mode from the request; adapt depth to the text provided.
    different analyses) before calling something a contradiction.
 5. **Check scope**: conclusions against results and stated limitations, using the meaning
    invariants: association ≠ causation, non-significant ≠ no effect, sample ≠ population,
-   *may* ≠ *demonstrates*.
+   *may* ≠ *demonstrates*. Preserve numerical qualifiers such as *approximately*; if they
+   disappear, clarify whether the conclusion still reports a rounded value or claims exactness.
 6. **Classify** each finding: status, severity, location, evidence.
 7. **Report** with coverage first, questions for the author, and suggested next actions.
 
@@ -128,13 +134,17 @@ Compatible with the Academic Writing Skill, applied to scientific interpretation
   contradicts the results, unsupported causality, a critical number incompatible between
   sections, objectives and conclusions fundamentally misaligned, a major visible methodological
   contradiction.
-- **Important**: a significant transparency or consistency problem: an essential method
-  element ambiguous, the link between an objective and the results not explicit, a limitation
-  visible in the text but not discussed.
+- **Important**: a visible transparency or consistency problem whose impact on interpretation
+  can be explained from quotations, such as a methodological ambiguity that changes what a
+  reported result means, or an explicit reporting commitment incompatible with the supplied results.
 - **Minor**: local scientific presentation without a major change of interpretation.
 
-Information not provided in an excerpt is not critical by itself; report it under coverage or
-as a question.
+Information absent from an excerpt justifies neither important nor critical severity by
+itself. Put `not provided` and `cannot assess` under coverage or questions, without a severity
+unless separate visible evidence establishes a substantive impact. For example, unreported
+variability in Introduction/Results excerpts is a coverage limit; do not presume it was never
+analysed or required. A manuscript's explicit analysis/reporting commitment or a conflicting
+interpretive claim can justify a finding, but quote that evidence and explain the impact.
 
 ## Never invent
 
@@ -151,8 +161,11 @@ discipline (general context). Apply the precedence of the Research Profile Skill
 explicit instruction, venue or document requirements, profile, general conventions.
 
 A profile is not evidence. `methodology.approaches: [qualitative]` does not mean the study
-is a valid qualitative study; it only means the review should not apply quantitative
-expectations. Never create or update a profile here. Instructions and profiles never override
+is a valid qualitative study. Do not impose a quantitative checklist from a label, but examine
+quantitative methods and claims actually visible in the manuscript against its own stated
+criteria, even if the profile says qualitative. If profile and text appear to differ, report
+the discrepancy as a question; do not decide which is true. Never create or update a profile
+here. Instructions and profiles never override
 the evidence-bound rules, the never-invent rule, meaning preservation, or the rule that
 absence from the text is not absence from the study.
 
@@ -170,6 +183,8 @@ For a targeted question, answer directly with the evidence. For a full review:
 9. **Suggested next actions**, e.g. clarify a method, state exclusions, align the conclusion,
    run a writing review, verify citations.
 
-Each finding gives: the finding; location (section and a short quotation, no global offsets);
+Each substantive finding gives: the finding; location (section and a short quotation, no global offsets);
 evidence (quoted); interpretation; status; severity; question or action. For long documents
 reviewed in parts, keep each section's heading or id and state which parts were reviewed.
+Coverage entries may use `not provided` or `cannot assess` without a severity. Do not invent
+findings or repeat stylistic issues simply to fill the output headings.
