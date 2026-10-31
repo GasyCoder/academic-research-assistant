@@ -4,6 +4,9 @@ Detailed criteria for step 4 of the [Academic Writing workflow](../SKILL.md#work
 dimension lists what to look for and what to avoid doing. Not every passage needs every
 dimension: pick those that match the request.
 
+Apply the [severity definitions](../SKILL.md#severity) by impact on meaning and understanding.
+Missing context in an excerpt calls for a question, not an automatic critical finding.
+
 ## Clarity
 
 Look for:
@@ -41,7 +44,8 @@ Look for:
 - the same transition repeated across paragraphs.
 
 Avoid: cutting conditions, limitations, hedges, definitions or the information a reader
-needs to reproduce or evaluate the work.
+needs to reproduce or evaluate the work. Repetition of a technical term may preserve its
+referent: do not replace it with a less precise synonym simply to vary the vocabulary.
 
 ## Coherence
 
@@ -67,7 +71,7 @@ Avoid: replacing clear words with jargon or making sentences longer to sound aca
 
 ## Argumentation
 
-Check that each relation is complete in the passage:
+For relations relevant to the passage, check that their connection is understandable:
 
 - claim → justification or evidence;
 - problem → evidence that it is a problem;
@@ -75,8 +79,10 @@ Check that each relation is complete in the passage:
 - hypothesis → rationale;
 - comparison → explicit basis and conclusion.
 
-When an element is missing, name it as a gap or a question for the author. Never supply the
-missing evidence, data or source.
+These are examples, not a required research structure: a passage need not have hypotheses,
+participants, quantitative data, or separate Results and Discussion sections. When support
+is not visible, ask whether it appears elsewhere before treating the omission as a defect.
+Never supply the missing evidence, data or source.
 
 ## Paragraph structure
 
@@ -92,6 +98,8 @@ language it is given; these notes cover conventions it does not judge.
 ### English
 
 - Keep one spelling variant (US or UK) consistently; check with `en-US` or `en-GB` accordingly.
+  Some British styles accept *-ize*; follow the stated house style rather than treating
+  every *-ize* spelling as American or incorrect.
 - Common hedges: *may*, *might*, *suggests*, *indicates*, *appears*, *likely*, *potentially*.
 - *We* is common in many fields; impersonal or passive constructions in others. Keep the
   author's choice unless asked.
@@ -105,5 +113,5 @@ language it is given; these notes cover conventions it does not judge.
 - *Nous* (often of modesty) and impersonal constructions are both used; keep the author's choice.
 - Watch for anglicisms and calques when a precise French term exists, but keep established
   technical terms of the field.
-- Long sentences are more accepted than in English; split them only when the structure is
-  unclear.
+- In either language, judge sentence structure by clarity, not a presumed national preference
+  or a fixed target length.

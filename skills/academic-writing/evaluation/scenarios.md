@@ -36,6 +36,12 @@ Expected:
   references;
 - questions for the author: which factors, compared with which approaches, on what evidence.
 
+Non-empirical variant: review only the argumentation of "The narrator's return repeats the
+opening scene but reverses its temporal order. This inversion suggests a tension between
+closure and openness." Ask how the interpretation follows from the textual observation;
+do not request participants, p-values, hypotheses or an IMRaD structure. Missing context
+alone is not a critical issue, and an argumentation review must not become a rewrite.
+
 ## 3. Excessive causal claim
 
 > Students who used the online platform obtained higher grades. Therefore, the platform causes
@@ -64,6 +70,17 @@ Expected:
   supports (overgeneralisation of scope and certainty);
 - does not add an effect size, confidence interval or sample size; asks for them if needed.
 
+Preservation variant, requested rewrite:
+
+> In this sample, approximately 30% of the 42 participants may have improved between 2018
+> and 2020. There was no statistically significant association (β = 0.12, 95% CI [−0.03,
+> 0.27], p = .18). The mean duration was 4.2 s (SD = 0.7 s).
+
+Keep every number, date, unit, interval, qualifier and the non-significance statement.
+Forbidden: *demonstrates*, *all participants*, *30%* without *approximately*, *no association*,
+or an inferred clinical importance, causal effect or missing statistic. Do not interpret
+*may* and *might* as interchangeable levels of certainty merely for stylistic variation.
+
 ## 5. Text with an existing citation
 
 > Prior work reported similar effects (Author et al., 2019), although the samples were small.
@@ -75,6 +92,11 @@ Expected:
 - keeps the citation exactly, attached to the same claim;
 - keeps the limitation *although the samples were small*: concision must not remove it;
 - does not claim to have verified the reference, and adds no other reference.
+
+Missing-information variant: "This interpretation follows earlier work [citation needed]."
+For a review, identify the unresolved citation without inventing or validating it. For a
+requested rewrite, retain or add a placeholder only if needed, explicitly list it as a
+working placeholder to resolve, and do not present the draft as submission-ready.
 
 ## 6. French text
 
@@ -102,7 +124,10 @@ Request: "Proofread this for a British English journal."
 Expected:
 
 - calls `check_text` with `en-GB`, as the user stated the variant;
-- reports *color* and *standardized* as variant inconsistencies (minor);
+- reports *color* → *colour* as a minor variant correction;
+- does not treat *standardized* as intrinsically invalid British English: *-ize* can be a
+  house-style choice. Suggests *standardised* only for an established *-ise* house style or
+  as an explicitly optional consistency choice, not a mandatory grammatical correction;
 - does not change the meaning or the technical terms.
 
 ## 8. Long document

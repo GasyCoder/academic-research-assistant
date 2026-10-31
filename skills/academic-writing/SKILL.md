@@ -1,6 +1,6 @@
 ---
 name: academic-writing
-description: Reviews and improves academic and scientific writing in any discipline and in several languages - clarity, precision, concision, coherence, register, argumentation and paragraph structure - while preserving the author's meaning, numbers and citations. Combines its own judgement with LanguageTool diagnostics from the LanguageTool MCP server when available. Use when asked to proofread, review, polish, tighten or rewrite a thesis, article, report, abstract or any passage of scholarly text.
+description: Review and improve academic or scholarly writing, including thesis/dissertation prose and article/manuscript prose. Use for proofreading, clarity, concision, academic style, argumentation review and meaning-preserving rewriting, with LanguageTool diagnostics when available. Review first. Do not use for translation-only tasks, literature searches, bibliographic/DOI verification, statistical analysis, full scientific peer review, research-profile management, code or ordinary non-academic writing.
 ---
 
 # Academic Writing
@@ -17,6 +17,10 @@ from the user or, later, from a research profile, never from this Skill.
 | LanguageTool MCP (`check_text`, `check_document`) | Spelling, grammar, agreement, punctuation and typography diagnostics, with rule, offset and suggestions | Whether a sentence is scientifically appropriate |
 | This Skill | Clarity, precision, register, coherence, argumentation, structure; which suggestion to apply | Facts, sources, data or findings that the text does not contain |
 | The author | Content, claims, sources, conventions of the field | — |
+
+Review the presentation and internal logic of the supplied passage, not the validity of the
+research design or a full scientific peer review. Flag methodological ambiguities as writing
+questions; do not perform statistical analysis, bibliographic validation or profile management.
 
 Every reported problem is one of:
 
@@ -93,17 +97,18 @@ names depend on how the client registered the server (e.g. `mcp__languagetool__c
 
 ## Severity
 
-- **Critical**: may mislead a reader about what was done or found, or creates an integrity
-  risk: a claim stronger than its evidence, unsupported causality, a contradiction, a number
-  inconsistent within the text, an ambiguity in methods or results, a statement presented as
-  established fact with no visible support.
+- **Critical**: a substantial risk of changing meaning or misleading a reader about what was
+  done, argued or found: unsupported causality, a major contradiction, an altered number or
+  attribution, or a methodological ambiguity that changes the interpretation. Explain the
+  concrete impact. Support absent from an excerpt is a question, not by itself proof of an
+  integrity problem or a reason for critical severity.
 - **Important**: noticeably weakens understanding or argument: undefined key term, missing
   link between steps, a paragraph without a clear point, overlong sentences hiding the main
   result, recurring register problems.
 - **Minor**: local polish: typo, punctuation, word choice, small redundancy.
 
-A comma is never critical; a grammatical slip is critical only when it changes the meaning
-(e.g. a lost negation).
+Ordinary grammar and punctuation errors are minor. They can be critical when they materially
+change meaning (e.g. a lost negation or punctuation changing the scope of a claim).
 
 ## Preserving meaning
 
@@ -119,8 +124,9 @@ A suggestion or rewrite must not silently change any of:
 - citations, their placement, and who said what (attribution).
 
 Never strengthen *may indicate* into *demonstrates*, *associated with* into *causes*, or
-*some participants* into *participants*. If improving the style would require one of these
-changes, propose the style change without it and ask the author.
+*some participants* into *participants*. Keep *in this sample* and *approximately 30%*;
+*no statistically significant association* must not become *no association*. If improving
+the style would require a change in meaning, keep the original claim and ask the author.
 
 Conversely, flag claims that seem stronger than the passage supports, and suggest a
 calibrated wording as an option ("if the data only show an association, consider...").
@@ -132,11 +138,14 @@ numbers, citations and technical terms must all still be there with the same mea
 
 Never add or guess citations, references, DOIs, authors, datasets, participant counts,
 statistical values, quotations, institutions, dates or findings, even to make a passage more
-convincing. When something is missing:
+convincing. This also covers instruments, coefficients, effect sizes, supposedly stated
+hypotheses, affiliations and journal titles. When something is missing:
 
 - name what is missing and where ("citation may be needed for this claim", "sample size not
   stated");
-- leave a visible placeholder if a rewrite needs one (e.g. `[citation needed]`, `[N = ?]`);
+- in a requested rewrite only, use a visible working placeholder if needed (e.g.
+  `[citation needed]`, `[N = ?]`), explicitly list it as unresolved and say the draft is not
+  final until the author supplies or removes it; do not insert placeholders into review-only text;
 - recommend that the author verify it.
 
 Citations are not verified in this Skill: it can say that a claim looks like it needs a source
@@ -145,7 +154,7 @@ or that a cited source is not visible in the passage, never that a reference is 
 ## Data, methods and results
 
 - Never change a number, unit, symbol, variable name or formula to improve style; do not infer
-  statistical significance that the text does not state.
+  statistical or clinical significance, effect size or causality that the text does not state.
 - Methods: improve wording, but report ambiguities (who, how many, when, with what, how
   analysed) as questions; never fill them in.
 - Results usually report findings and Discussion interprets, compares and contextualises.
