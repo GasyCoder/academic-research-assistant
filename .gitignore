@@ -46,3 +46,7 @@ test-results/
 *.pem
 *.key
 *.secret
+
+# Research profiles of real projects stay local
+profiles/local/*
+!profiles/local/README.md

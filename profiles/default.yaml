@@ -1,3 +1,84 @@
-# Placeholder.
-# The final schema and configuration format will be defined
-# during the Research Profile implementation phase.
+## Example research profile (format version 1). Not a real project.
+##
+## A profile declares the context of a research project for the academic Skills.
+## Copy this file to profiles/local/ (ignored by Git) and fill in only what you know:
+## - a field you leave out means "unknown", and the Skills then use general conventions;
+## - do not write null, empty text or empty lists: leave the field out instead;
+## - write only what you state or confirm yourself, never values guessed from a text;
+## - never store passwords, tokens, API keys or personal data you do not need.
+## Format reference: skills/research-profile/references/profile-format.md
+## Validate with: npm run validate:profiles -- profiles/local/<your-profile>.yaml
+##
+## Lines starting with "# " are commented examples: uncomment and edit what applies.
+
+profileVersion: 1
+
+## Optional non-personal slug naming the profile.
+# id: example-project
+
+## The project, not the researcher. All fields optional.
+# project:
+#   title: Working title of the project
+#   topic: One-sentence description of the research topic
+#   keywords: [first keyword, second keyword]
+
+## Free text; there is no closed list of disciplines.
+# discipline:
+#   name: Name of the discipline
+#   field: Field within the discipline
+#   subfield: Subfield, if useful
+
+## approaches: qualitative, quantitative, mixed, theoretical, computational,
+## experimental, doctrinal or other (describe "other" in notes). Several are allowed.
+# methodology:
+#   approaches: [qualitative, quantitative]
+#   methods: [method as you name it, another method]
+#   source: stated
+
+## type: thesis, dissertation, article, conference-paper, report, proposal,
+## book-chapter or other (describe "other" in typeNote).
+# document:
+#   type: article
+#   currentSection: Name of the section being written
+
+# language:
+#   primary: en
+#   variant: en-GB
+
+## Context only: no citation formatting or reference checking is implied.
+# citationStyle:
+#   name: APA
+#   edition: 7
+
+## preference: first-person-singular, first-person-plural, impersonal, passive
+## or no-preference.
+# voice:
+#   preference: first-person-plural
+
+# sections:
+#   expected: [Introduction, Methods, Results, Discussion, Conclusion]
+#   resultsAndDiscussion: separate
+#   abstract:
+#     structured: true
+#     requiredParts: [Background, Methods, Results, Conclusions]
+
+## Only requirements you read in the venue's guidelines; they may change over time.
+# venue:
+#   name: Name of the target journal or conference
+#   wordLimit: 8000
+#   abstractWordLimit: 250
+#   requiredSections: [Data availability statement]
+#   styleNotes: [Spell out numbers below ten]
+#   guidelinesCheckedOn: 2026-01-15
+#   source: venue-guidelines
+
+## A lexical glossary: it fixes wording, not facts.
+# terminology:
+#   preferred:
+#     - term: preferred term
+#       insteadOf: [variant to avoid]
+#   avoid: [vague expression]
+#   abbreviations:
+#     - abbreviation: ABC
+#       expansion: Expansion of the abbreviation
+#   protected: [Exact name of an instrument or model]
