@@ -40,7 +40,7 @@ const boundaries = (text: string) => {
 const snapshots = new WeakMap<Document, Map<string, Segment>>();
 
 /** Conservative syntax protection, not citation identification or validation. */
-export function inlineProtection(text: string): Span[] {
+export function inlineProtection(text: string, excluded: Span[] = []): Span[] {
   const patterns: [string, RegExp][] = [
     ['url', /(?:https?:\/\/|www\.)[^\s<>]+/gu],
     ['citation', /\[(?:@[^\]\n]+|\d+(?:\s*[,–-]\s*\d+)*)\]/gu],
@@ -50,13 +50,25 @@ export function inlineProtection(text: string): Span[] {
     if((/\p{L}/u.test(match[0])&&/\b\d{4}[a-z]?\b/u.test(match[0]))||/^\(\d{4}[a-z]?(?:\s*[,;]\s*\d{4}[a-z]?)*\)$/u.test(match[0]))
       spans.push({start:match.index,end:match.index+match[0].length,kind:'citation'});
   }
+  // Syntax inside code, link destinations, fields or other exclusions must not act as
+  // delimiters for surrounding prose. Keep scanning the whole unit for cross-run markers.
+  const ignored=union([...excluded,...spans]);
+  const ignoredAt=(index:number):Span|undefined=>{
+    let low=0,high=ignored.length-1;
+    while(low<=high){const middle=(low+high)>>>1,span=ignored[middle];
+      if(index<span.start)high=middle-1;else if(index>=span.end)low=middle+1;else return span;}
+    return undefined;
+  };
+  const isEscaped=(index:number)=>{
+    let count=0;for(let n=index-1;n>=0&&text[n]==='\\';n--)count++;return count%2===1;
+  };
   for(let at=0;at<text.length;at++) {
     if(text[at]!=='$')continue;
-    let backslashes=0;for(let n=at-1;n>=0&&text[n]==='\\';n--)backslashes++;
-    if(backslashes%2)continue;
-    const delimiter=text.startsWith('$$',at)?'$$':'$';
+    const skip=ignoredAt(at);if(skip){at=skip.end-1;continue;}
+    if(isEscaped(at))continue;
+    const delimiter=text.startsWith('$$',at)&&!ignoredAt(at+1)?'$$':'$';
     let end=text.indexOf(delimiter,at+delimiter.length);
-    while(end>=0&&text[end-1]==='\\')end=text.indexOf(delimiter,end+delimiter.length);
+    while(end>=0&&(isEscaped(end)||ignoredAt(end)||ignoredAt(end+delimiter.length-1)))end=text.indexOf(delimiter,end+delimiter.length);
     spans.push({start:at,end:end<0?text.length:end+delimiter.length,kind:end<0?'unclosedMath':'math'});
     at=end<0?text.length:end+delimiter.length-1;
   }
@@ -112,11 +124,11 @@ export class Builder {
       at = Math.max(at,range.end);
     }
     if (at < text.length) protection.push({start:at,end:text.length,kind});
-    const inline=eligible.length?inlineProtection(text):[];
+    const inline=eligible.length?inlineProtection(text,protection):[];
     protection.push(...inline);
     if(inline.some(s=>s.kind==='unclosedMath'))this.omit('UNCLOSED_MATH_NOT_SUBMITTED',location);
     if(kind==='caption') {
-      const label=/^\s*(?:[\p{L}.]+\s+)?\d+(?:[.-]\d+)*[.:]?/u.exec(text);
+      const label=/^[\s\uFFFC]*(?:[\p{L}.]+[\s\uFFFC]+)?\d+(?:[.-]\d+)*[.:]?/u.exec(text);
       if(label)protection.push({start:0,end:label[0].length,kind:'captionLabel'});
     }
     const unit: Unit = {id:`unit:${this.document.units.length+1}`,kind,text,location,protected:union(protection),metadata};

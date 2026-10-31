@@ -4,7 +4,7 @@ import { Builder, DocumentError, LIMITS, type Location, type Range } from './mod
 
 const WORD = new Set(['http://schemas.openxmlformats.org/wordprocessingml/2006/main','http://purl.oclc.org/ooxml/wordprocessingml/main']);
 const selected = new Set(['[Content_Types].xml','word/document.xml','word/footnotes.xml','word/endnotes.xml',
-  'word/_rels/document.xml.rels','docProps/core.xml']);
+  'word/_rels/document.xml.rels','word/_rels/footnotes.xml.rels','word/_rels/endnotes.xml.rels','docProps/core.xml']);
 const utf8 = (data:Uint8Array) => {
   try {return new TextDecoder('utf-8',{fatal:true}).decode(data);} catch {throw new DocumentError('MALFORMED_DOCUMENT');}
 };
@@ -79,14 +79,16 @@ export async function docx(input:Uint8Array,builder:Builder):Promise<void> {
     }
   },()=>{},()=>{});
   if(!mainType)throw new DocumentError('MALFORMED_DOCUMENT');
-  const relationships:Record<string,{target?:string;external:boolean}> = Object.create(null);
-  if(archive.has('word/_rels/document.xml.rels'))parseXml(archive.get('word/_rels/document.xml.rels')!,tag=>{
-    if(tag.local==='Relationship')relationships[attr(tag,'Id')??'']={target:attr(tag,'Target'),external:attr(tag,'TargetMode')==='External'};
-  },()=>{},()=>{});
   let totalText=0;
   builder.omit('DOCX_STYLE_INHERITANCE_AND_LAYOUT_NOT_RESOLVED');
   for(const part of ['word/document.xml','word/footnotes.xml','word/endnotes.xml']) {
     const xml=archive.get(part);if(!xml)continue;
+    // Relationship ids are local to the owning XML part, including each notes part.
+    const relationships:Record<string,{target?:string;external:boolean}>=Object.create(null);
+    const relationshipPart=`word/_rels/${part.slice('word/'.length)}.rels`;
+    if(archive.has(relationshipPart))parseXml(archive.get(relationshipPart)!,tag=>{
+      if(tag.local==='Relationship')relationships[attr(tag,'Id')??'']={target:attr(tag,'Target'),external:attr(tag,'TargetMode')==='External'};
+    },()=>{},()=>{});
     let paragraph:Paragraph|undefined,buffer='',inText=false,inInstruction=false,fieldDepth=0,opaque=0,hyperlink:string|undefined;
     let runStyles:Record<string,string|boolean>={};let rootSeen=false;
     const structures:{kind:string;path:string;counters:Record<string,number>}[]=[{kind:'root',path:part==='word/document.xml'?'body':'notes',counters:{}}];
@@ -108,6 +110,11 @@ export async function docx(input:Uint8Array,builder:Builder):Promise<void> {
         return;
       }
       const name=tag.local;
+      if(['rPrChange','pPrChange','tblPrChange','trPrChange','tcPrChange','sectPrChange'].includes(name)) {
+        // Historical formatting is not visible content; inserting a marker would alter
+        // current captions, heading titles and cross-run grapheme boundaries.
+        opaque=1;builder.omit('DOCX_OPAQUE_CONTENT');return;
+      }
       if(['drawing','pict','object','del','ins','moveFrom','moveTo','sdt','altChunk'].includes(name)) {
         opaque=1;mark(name);builder.omit('DOCX_OPAQUE_CONTENT');return;
       }
@@ -136,6 +143,10 @@ export async function docx(input:Uint8Array,builder:Builder):Promise<void> {
       if(name==='t'){inText=true;buffer='';paragraph.textNode++;}
       if(['footnoteReference','endnoteReference','commentReference','bookmarkStart','bookmarkEnd'].includes(name))mark(name,{id:attr(tag,'id')});
       if(name==='tab'||name==='br'||name==='cr')mark(name);
+      if(['noBreakHyphen','softHyphen','sym'].includes(name)) {
+        mark(name,{font:attr(tag,'font'),char:attr(tag,'char')});
+        builder.omit('DOCX_SPECIAL_CHARACTER_NOT_DECODED');
+      }
     },text=>{
       if(opaque)return;
       if(inText||inInstruction){buffer+=text;if((totalText+=text.length)>LIMITS.text)throw new DocumentError('LIMIT_EXCEEDED');}
@@ -172,7 +183,7 @@ export async function docx(input:Uint8Array,builder:Builder):Promise<void> {
   const metadata=archive.get('docProps/core.xml');
   if(metadata) {
     let field:string|undefined,buffer='';
-    parseXml(metadata,tag=>{if(['title','subject','language'].includes(tag.local)){field=tag.local;buffer='';}},text=>{if(field){buffer+=text;if(buffer.length>LIMITS.text)throw new DocumentError('LIMIT_EXCEEDED');}},tag=>{
+    parseXml(metadata,tag=>{if(['title','subject','language'].includes(tag.local)){field=tag.local;buffer='';}},text=>{if(field){buffer+=text;if((totalText+=text.length)>LIMITS.text)throw new DocumentError('LIMIT_EXCEEDED');}},tag=>{
       if(tag.local===field){builder.add('metadata',buffer,builder.location('docProps/core.xml',field!),[],{field});field=undefined;}
     });
   }

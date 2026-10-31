@@ -5,10 +5,15 @@ const escaped = (text:string, at:number) => {
   let count=0; while (at > 0 && text[--at] === '\\') count++; return count%2===1;
 };
 function balanced(text:string, at:number, open='{', close='}'): number {
-  let depth=0;
+  let depth=0,groups=0;
   for (let i=at;i<text.length;i++) {
     if (text[i] === '%' && !escaped(text,i)) { const n=text.indexOf('\n',i); if(n<0)return -1; i=n; continue; }
     if (escaped(text,i)) continue;
+    if(open==='['){
+      if(text[i]==='{'){groups++;continue;}
+      if(text[i]==='}'){if(groups===0)return -1;groups--;continue;}
+      if(groups>0)continue;
+    }
     if (text[i] === open) depth++;
     if (text[i] === close && --depth === 0) return i+1;
   }
@@ -30,6 +35,19 @@ function closingEnvironment(text:string,at:number,name:string):number {
   for(let i=at;i<text.length;i++) {
     if(text[i]==='%'&&!escaped(text,i)){const n=text.indexOf('\n',i);if(n<0)return -1;i=n;continue;}
     if(escaped(text,i))continue;
+    const inline=/^\\verb(?![A-Za-z])\*?/u.exec(text.slice(i));
+    if(inline){
+      const delimiterAt=i+inline[0].length,delimiter=text[delimiterAt];
+      if(!delimiter||delimiter==='\n'||delimiter==='\r')return -1;
+      const closing=text.indexOf(delimiter,delimiterAt+1),newline=text.indexOf('\n',delimiterAt);
+      if(closing<0||(newline>=0&&closing>newline))return -1;
+      i=closing;continue;
+    }
+    const literal=/^\\begin\{(verbatim\*?|lstlisting|minted)\}/u.exec(text.slice(i));
+    if(literal){
+      const terminator=`\\end{${literal[1]}}`,closing=text.indexOf(terminator,i+literal[0].length);
+      if(closing<0)return -1;i=closing+terminator.length-1;continue;
+    }
     if(text.startsWith(begin,i)){depth++;i+=begin.length-1;}
     else if(text.startsWith(end,i)){if(--depth===0)return i+end.length;i+=end.length-1;}
   }
@@ -70,10 +88,10 @@ export function latex(source:string,builder:Builder):void {
       const close=source[i+1]==='('? '\\)':'\\]'; const end=closingMath(source,i+2,close);
       i=end<0?source.length:end+2;protectedRegion(start,i,'math');if(end<0)builder.omit('UNCLOSED_MATH');continue;
     }
-    const command=/^\\([A-Za-z@]+\*?|[^\r\n])/u.exec(source.slice(i));
+    const command=/^\\([A-Za-z]+\*?|[^\r\n])/u.exec(source.slice(i));
     if(!command){protectedRegion(i,++i,'command');continue;}
     const name=command[1].replace(/\*$/u,'');i+=command[0].length;
-    if(['catcode','csname','def','gdef','edef','xdef','let','futurelet','newcommand','renewcommand',
+    if(['catcode','makeatletter','makeatother','csname','def','gdef','edef','xdef','let','futurelet','newcommand','renewcommand',
       'providecommand','DeclareRobustCommand','newenvironment','renewenvironment','NewDocumentCommand',
       'RenewDocumentCommand','ProvideDocumentCommand','DeclareDocumentCommand','newif'].includes(name)||name.startsWith('if')) {
       protectedRegion(start,source.length,'unsupported',name);stoppedForDynamicSyntax=true;builder.omit('DYNAMIC_TEX_NOT_INTERPRETED');break;
