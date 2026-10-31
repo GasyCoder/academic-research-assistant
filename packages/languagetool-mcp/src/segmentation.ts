@@ -115,7 +115,9 @@ const GRAPHEME_WINDOW = 1_024;
  * whether a cluster starts at a code point depends on that code point and the text before it, and no
  * UAX #29 rule looks back across a boundary except regional-indicator pairing, whose count is even
  * there. A window never ends inside a surrogate pair, whose lone half would read as another code
- * point. A cluster filling a whole window makes the window grow.
+ * point. A cluster filling a whole window makes the window grow; a grown window is read only until
+ * the next cluster starts, then normal windows resume. Iterating its short tail on Node 20 would
+ * otherwise copy that entire grown window for every cluster and reintroduce quadratic work.
  */
 export function graphemeBoundaryPositions(text: string, window = GRAPHEME_WINDOW): number[] {
   const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
@@ -127,9 +129,21 @@ export function graphemeBoundaryPositions(text: string, window = GRAPHEME_WINDOW
     if (withoutSurrogateSplit(text, end) !== end) {
       end++;
     }
-    const starts = Array.from(segmenter.segment(text.slice(start, end)), ({ index }) => start + index);
+    const starts: number[] = [];
+    for (const { index } of segmenter.segment(text.slice(start, end))) {
+      starts.push(start + index);
+      if (size > window && starts.length === 2) {
+        break;
+      }
+    }
     if (end < text.length && starts.length < 2) {
       size *= 2;
+      continue;
+    }
+    if (size > window && starts.length === 2) {
+      positions.push(starts[0]!);
+      start = starts[1]!;
+      size = window;
       continue;
     }
     const resume = end < text.length ? starts.pop()! : text.length;

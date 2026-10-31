@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { type Segment, type SegmentationOptions, graphemeBoundaryPositions, segmentDocument } from '../src/segmentation.js';
 
@@ -270,6 +270,44 @@ describe('segmentDocument', () => {
 });
 
 describe('graphemeBoundaryPositions', () => {
+  it.each([
+    `a${'\u0301'.repeat(1_100)}😀${'x'.repeat(1_100)}`,
+    `${'👩‍'.repeat(400)}👩${'x'.repeat(1_100)}`,
+    `${'क्'.repeat(600)}ष${'x'.repeat(1_100)}`,
+  ])('preserves whole-text boundaries when an expanded cluster has a short tail (%#)', (text) => {
+    const whole = Array.from(new Intl.Segmenter('en', { granularity: 'grapheme' }).segment(text), ({ index }) => index);
+    whole.push(text.length);
+    expect(graphemeBoundaryPositions(text)).toEqual(whole);
+  });
+
+  it.each([512, 1_024, 2_048])('bounds Node 20 copy work after a long cluster in %i units', (length) => {
+    const text = `a${'\u0301'.repeat(length / 2)}${'x'.repeat(length / 2 - 1)}`;
+    const window = 16;
+    const original = Intl.Segmenter.prototype.segment;
+    const expected = Array.from(new Intl.Segmenter('en', { granularity: 'grapheme' }).segment(text), ({ index }) => index);
+    expected.push(text.length);
+    let copiedUnits = 0;
+    // Node 20 copies the segmented input for every yielded cluster. Count that work instead
+    // of timing a large document: an expanded window must not yield an unbounded short tail.
+    const spy = vi.spyOn(Intl.Segmenter.prototype, 'segment').mockImplementation(function (this: Intl.Segmenter, input: string) {
+      const segments = original.call(this, input);
+      return {
+        *[Symbol.iterator]() {
+          for (const segment of segments) {
+            copiedUnits += input.length;
+            yield segment;
+          }
+        },
+      } as Intl.Segments;
+    });
+    try {
+      expect(graphemeBoundaryPositions(text, window)).toEqual(expected);
+      expect(copiedUnits).toBeLessThanOrEqual(4 * text.length * window);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   const cp = (...codes: number[]) => String.fromCodePoint(...codes);
   // Units chosen for UAX #29 rules that look at more than two code points.
   const pieces = [
