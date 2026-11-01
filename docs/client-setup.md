@@ -2,7 +2,7 @@
 
 The supported path is a full clone with `npm ci` and `npm run build`. Packages remain private
 and unpublished; do not use fictitious npx install commands. No marketplace exists for this
-project. Licence selection remains an owner action.
+project. The owner selected [Apache-2.0](../LICENSE); publication remains a separate decision.
 
 ## Skills-only local plugin
 
@@ -24,7 +24,8 @@ The [official manifest reference](https://code.claude.com/docs/en/plugins-refere
 [local loading docs](https://code.claude.com/docs/en/plugins) were checked in Phase 10.
 Claude Code 2.1.314 locally validated the manifest. Warnings include no author attribution
 and that root CLAUDE.md is not plugin context. Directory submission checks additionally flag
-the missing licence and listing icon; local loading is distinct from directory acceptance.
+the listing icon; the historical missing-licence finding is resolved by Apache-2.0 adoption.
+Local loading is distinct from directory acceptance.
 No authenticated model session or marketplace installation was used for validation.
 
 Keep the full clone: Skill links reach root docs, schemas and discipline resources. Copying

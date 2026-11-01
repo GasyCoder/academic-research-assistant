@@ -22,7 +22,7 @@ try {
     assert(packed?.filename, 'npm pack must return an archive');
     const modules = directory === 'document-formats' ? ['docx','index','latex','markdown','model'] :
       ['config','contracts','http','index','metadata','providers','server','service','vale','version'];
-    const expected = ['package.json', ...(directory === 'research-integrations-mcp' ? ['README.md'] : []),
+    const expected = ['package.json', 'LICENSE', ...(directory === 'research-integrations-mcp' ? ['README.md'] : []),
       ...modules.flatMap(name => [`dist/${name}.js`, `dist/${name}.d.ts`])];
     const paths = packed.files.map(file => file.path);
     for (const path of expected) assert(paths.includes(path), `missing package file: ${path}`);
@@ -31,6 +31,7 @@ try {
       assert(file.size < 256 * 1024, 'unexpected large package file');
     }
     assert.equal(manifest.private, true, 'no publication authorized');
+    assert.equal(manifest.license, 'Apache-2.0', 'owner-approved license metadata required');
     tarballs.push(join(work, packed.filename));
     console.log(`${manifest.name}@${manifest.version}: ${paths.length} expected tarball files`);
   }

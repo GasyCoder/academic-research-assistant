@@ -1,7 +1,7 @@
 # Contributing
 
-Licence selection is pending. Do not assume an MIT/Apache grant or publish/relicense this
-repository. The owner must resolve that before a distributable release.
+This repository uses the owner-approved [Apache-2.0 licence](LICENSE). Preserve licence and
+[third-party notices](docs/third-party-notices.md); publication still needs explicit approval.
 
 Use a focused branch from main, preserve unrelated work and keep commits atomic. Read
 README, CLAUDE, AGENTS and docs/architecture before code changes. Install with `npm ci`

@@ -44,8 +44,10 @@ export function checkVersions(manifests, plugin) {
     if (manifests[key].version !== version) errors.push(`${key} version differs from root`);
   if (plugin.version !== version) errors.push('plugin version differs from root');
   if (plugin.name !== 'academic-research-assistant') errors.push('unexpected plugin name');
-  if (Object.keys(plugin).some(key => !['name', 'version', 'description'].includes(key))) errors.push('plugin must remain Skills-only without auto-start components');
+  if (Object.keys(plugin).some(key => !['name', 'version', 'description', 'license'].includes(key))) errors.push('plugin must remain Skills-only without auto-start components');
+  if (plugin.license !== 'Apache-2.0') errors.push('plugin must use the owner-approved Apache-2.0 license');
   for (const [key, manifest] of Object.entries(manifests)) {
+    if (manifest.license !== 'Apache-2.0') errors.push(`${key} must use the owner-approved Apache-2.0 license`);
     if (manifest.private !== true) errors.push(`${key} must remain private until publication is explicitly approved`);
     if (manifest.engines?.node !== '>=20') errors.push(`${key} engines must match the tested Node floor`);
   }

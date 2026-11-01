@@ -34,5 +34,6 @@
     "micromark-extension-gfm": "^3.0.0",
     "sax": "^1.6.1",
     "yauzl": "^3.4.0"
-  }
+  },
+  "license": "Apache-2.0"
 }

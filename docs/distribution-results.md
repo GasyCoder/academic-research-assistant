@@ -1,5 +1,10 @@
 # Phase 10 preparation results — 2026-11-01
 
+Historical Phase 10 record, preserved as observed before owner release decisions.
+The owner subsequently selected Apache-2.0; see the current [release procedure](releasing.md)
+and [third-party licence review](third-party-notices.md). Historical findings below are not
+a statement that the licence decision is still open.
+
 Technical scope: release preparation only, on `feat/distribution` above `af860f0`.
 No new academic Skill/provider/parser/format was added. No push, merge, tag, publication,
 GitHub Release or marketplace listing is performed. Licence remains explicitly undecided

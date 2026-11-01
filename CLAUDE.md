@@ -2,8 +2,8 @@
 
 ## Project
 
-Academic Research Assistant is a generic public research toolkit intended for open-source
-distribution once its owner selects a licence. Do not assume a licence grant before then.
+Academic Research Assistant is a generic public research toolkit licensed under Apache-2.0,
+explicitly selected by its owner. Packages remain private; licence adoption does not authorize publication.
 
 It must remain reusable across:
 

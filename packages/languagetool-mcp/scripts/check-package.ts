@@ -22,7 +22,7 @@ const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 
 /** The built JavaScript, plus what npm always adds. Sources, tests, maps and declarations stay out. */
 const ALLOWED = [/^package\.json$/, /^README\.md$/, /^LICEN[CS]E(\.md|\.txt)?$/i, /^dist\/.+\.js$/];
-const REQUIRED = ['package.json', 'README.md', 'dist/index.js', 'dist/server.js', 'dist/segmentation.js'];
+const REQUIRED = ['package.json', 'README.md', 'LICENSE', 'dist/index.js', 'dist/server.js', 'dist/segmentation.js'];
 /** Development dependencies that must not reach an installation. */
 const DEV_ONLY = ['@modelcontextprotocol/client', 'tsx', 'typescript', 'vitest'];
 

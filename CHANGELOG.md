@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-Proposed next version: **0.4.0**, pending owner licence/release decisions and independent audit.
+Authorized release-preparation target: **0.4.0**, pending final audit and owner release gates.
 No release has been published by this work.
 
 - Academic Writing, Research Profile, Scientific Review and Citation Integrity Skills.
@@ -13,6 +13,7 @@ No release has been published by this work.
   provenance, candidate/disagreement reporting and limits.
 - Regressions hardening format protection/mapping, HTTP redirects/backoff, credential
   redaction and metadata comparison. Metadata cannot establish claim support.
+- Owner-approved Apache-2.0 licence, matching package/plugin metadata and packaged licence copies.
 - Distribution preparation: local Skills plugin, setup/config/privacy/contribution docs,
   examples, version/link validation and independent package-install checks.
 

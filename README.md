@@ -4,9 +4,10 @@ A public toolkit for researchers, PhD students and scientific authors: academic 
 scientific structure review and evidence-bound citation review, with optional local linguistic
 tools and external metadata checks. It supports declared project context across disciplines.
 
-**Release status:** intended for open-source distribution once the owner selects a licence.
-No `LICENSE` has been selected; all npm packages remain private and unpublished. The current
-runtime version is 0.3.0; 0.4.0 is a proposed next release, not a published version.
+**License:** [Apache-2.0](LICENSE), explicitly selected by the owner.
+All npm packages remain private and unpublished. The current runtime version is 0.3.0;
+0.4.0 is the authorized release-preparation target, not a published version.
+[Third-party licences and notices](docs/third-party-notices.md) remain applicable.
 See [distribution status](docs/distribution.md) and the [release checklist](docs/releasing.md).
 
 ## Capabilities

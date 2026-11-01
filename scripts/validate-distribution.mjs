@@ -9,6 +9,11 @@ const json = path => JSON.parse(readFileSync(resolve(root, path), 'utf8'));
 const errors = checkVersions({ root: json('package.json'), languagetool: json('packages/languagetool-mcp/package.json'),
   integrations: json('packages/research-integrations-mcp/package.json'), formats: json('packages/document-formats/package.json') },
 json('.claude-plugin/plugin.json'));
+const license = readFileSync(resolve(root, 'LICENSE'), 'utf8');
+for (const directory of ['languagetool-mcp', 'document-formats', 'research-integrations-mcp']) {
+  if (readFileSync(resolve(root, 'packages', directory, 'LICENSE'), 'utf8') !== license)
+    errors.push(`${directory}: packaged LICENSE must match the repository LICENSE`);
+}
 const files = markdownFiles(root).filter(f => !f.startsWith(resolve(root, 'profiles/local') + '/'));
 for (const file of files) errors.push(...checkLinks(file, root));
 for (const name of ['minimal', 'complete']) {

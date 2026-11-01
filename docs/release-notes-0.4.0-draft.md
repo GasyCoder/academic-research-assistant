@@ -1,7 +1,8 @@
 # Draft release notes — proposed 0.4.0
 
-**Unpublished draft.** Licence selection, version bump, independent audit and owner approval
-remain outstanding. These notes are not a tag, release or npm publication.
+**Unpublished draft.** The owner selected Apache-2.0 and authorized 0.4.0 preparation.
+Final preparation audit and owner release gates remain outstanding. These notes are not
+a tag, release or npm publication.
 
 Since the LanguageTool-focused v0.3.0 baseline: Academic Writing, declared Research Profile
 context, Scientific Review and Citation Integrity Skills; five optional Discipline Profiles
@@ -21,4 +22,5 @@ an offline example, local Skills plugin, contribution/security docs and isolated
 LanguageTool tool names/limits remain compatible; additions are optional. New APIs remain
 pre-1.0 and may change in a documented minor release. No break to the tagged LanguageTool
 API is claimed. Only Linux/Node 20 and 22 checks are evidenced; broader OS/host compatibility
-needs testing. Licence and distribution destinations must be resolved before publication.
+needs testing. Distribution destinations and private security reporting must be resolved
+before publication. The project uses the owner-approved Apache-2.0 licence.

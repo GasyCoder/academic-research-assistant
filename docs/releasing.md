@@ -22,9 +22,9 @@ policy applies. Do not use an all-workspaces bump that changes the internal libr
 
 ## Exact next release procedure (owner only, not executed)
 
-1. Select MIT or Apache-2.0 (or make a separately reviewed owner decision), add the approved
-   LICENSE/SPDX metadata and appropriate attribution/notices. Review dependencies' notices.
-   The owner explicitly left this choice open during Phase 10: it is a release **BLOCKER**.
+1. Verify the owner's approved [Apache-2.0 LICENSE](../LICENSE), matching package/plugin
+   SPDX metadata and packaged licence copies. The owner resolved the previously open choice
+   after the Phase 10 audit. Review [third-party notices](third-party-notices.md).
 2. Review the independent audit; start a dedicated release-preparation branch from clean,
    current main. Approve 0.4.0 or document a different target. Update only root, the two MCP
    manifests and plugin version, and refresh the lockfile. For the proposed target:

@@ -1,5 +1,10 @@
 # Final Phase 10 distribution audit — 2026-11-01
 
+Historical Phase 10 record, preserved as observed before owner release decisions.
+The owner subsequently selected Apache-2.0; see the current [release procedure](releasing.md)
+and [third-party licence review](third-party-notices.md). Historical findings below are not
+a statement that the licence decision is still open.
+
 Readiness: **READY AFTER OWNER ACTION**.
 
 The submitted distribution checks are reproducible. No demonstrated runtime or packaging

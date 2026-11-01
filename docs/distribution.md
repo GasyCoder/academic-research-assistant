@@ -12,7 +12,7 @@ All manifests declare `engines.node: >=20`; CI tests official full-ICU Node 20 a
 | Surface | Version/private | Entry/export and files | Purpose/disposition |
 | --- | --- | --- | --- |
 | academic-research-assistant (root) | 0.3.0 / true | No bin/exports; workspace scripts | Development only; never publish root |
-| @gasycoder/languagetool-mcp | 0.3.0 / true | bin languagetool-mcp → dist/index.js; only package.json exported; files dist/**/*.js | Potential future public CLI, after explicit licence/publication decision; no library import/types API |
+| @gasycoder/languagetool-mcp | 0.3.0 / true | bin languagetool-mcp → dist/index.js; only package.json exported; files dist/**/*.js | Potential future public CLI, after explicit publication decision; no library import/types API |
 | @gasycoder/research-integrations-mcp | 0.3.0 / true | bin research-integrations-mcp → dist/index.js; ESM service.js + declarations, package.json export; files dist | Potential future public CLI/library after explicit owner decision |
 | @gasycoder/document-formats | 0.1.0 / true | No bin; ESM index.js + declarations; files dist | Internal library for this release, separately versioned; no public publication decision |
 | Claude local plugin | 0.3.0 | .claude-plugin/plugin.json; default skills/ | Full clone, Skills-only; no automatic MCP/hook or marketplace |
@@ -56,11 +56,12 @@ Claude CLI; no fake marketplace or authenticated model session is claimed.
 
 ## Release gates
 
-- **BLOCKER:** owner licence decision remains open by explicit instruction. No LICENSE or
-  SPDX grant has been added. Do not describe the current repository as legally open source,
-  remove private flags or publish before this is resolved.
-- **Owner action:** approve target version, review the independent audit and select actual
-  distribution surfaces. Apply/review the coordinated version bump in a later release PR.
+- **Licence resolved:** the owner explicitly selected [Apache-2.0](../LICENSE). Root, all
+  workspaces and plugin carry that SPDX identifier; each runtime tarball includes the exact
+  licence text. [Third-party notices](third-party-notices.md) are reviewed separately.
+  Licence adoption does not authorize changing private flags or publishing.
+- **Owner action:** review final release preparation and select actual distribution surfaces.
+  The owner authorized 0.4.0 preparation; its coordinated bump belongs in the release PR.
   These intentional gates do not prevent local testing of private tarballs.
 - **SHOULD FIX before public release:** establish/verify a private security reporting channel,
   clarify maintenance/backport expectations and finalize attribution/licence notices. No
