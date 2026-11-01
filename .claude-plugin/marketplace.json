@@ -1,0 +1,15 @@
+{
+  "name": "gasycoder-academic-tools",
+  "description": "Academic research tools by GasyCoder",
+  "owner": {
+    "name": "GasyCoder",
+    "url": "https://github.com/GasyCoder"
+  },
+  "plugins": [
+    {
+      "name": "academic-research-assistant",
+      "source": "./",
+      "description": "Academic writing, scientific review, research profiles and evidence-bound citation review."
+    }
+  ]
+}

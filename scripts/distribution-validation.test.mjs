@@ -3,7 +3,7 @@ import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { anchors, checkLinks, checkVersions } from './distribution-validation.mjs';
+import { anchors, checkLinks, checkVersions, checkMarketplace } from './distribution-validation.mjs';
 
 const manifests = () => Object.fromEntries(['root','languagetool','integrations','formats'].map(key =>
   [key, { version: key === 'formats' ? '0.1.0' : '0.3.0', private: true, engines: { node: '>=20' }, license: 'Apache-2.0' }]));
@@ -24,6 +24,30 @@ test('rejects missing or conflicting owner-approved license metadata', () => {
     'plugin must use the owner-approved Apache-2.0 license',
     'formats must use the owner-approved Apache-2.0 license',
   ]);
+});
+const marketplace = () => ({ name: 'gasycoder-academic-tools', owner: { name: 'GasyCoder' },
+  description: 'Academic tools', plugins: [{ name: plugin.name, source: './', description: 'Four Skills' }] });
+test('accepts the root plugin catalog without a duplicate version source', () => {
+  assert.deepEqual(checkMarketplace(marketplace(), plugin), []);
+});
+test('rejects marketplace identity drift and missing or malformed entries', () => {
+  assert.deepEqual(checkMarketplace(null, plugin), ['marketplace must be an object']);
+  assert(checkMarketplace({ ...marketplace(), name: 'other', owner: {}, plugins: [] }, plugin).length === 3);
+  assert.deepEqual(checkMarketplace({ ...marketplace(), plugins: [null] }, plugin), ['marketplace plugin entry must be an object']);
+  const changed = marketplace(); changed.plugins[0].name = 'other';
+  assert.deepEqual(checkMarketplace(changed, plugin), ['marketplace plugin name differs from plugin manifest']);
+});
+test('rejects escaped, remote or missing plugin sources instead of changing the root contract', () => {
+  for (const source of ['../', './missing', '/absolute/plugin', { source: 'github', repo: 'example/plugin' }, undefined]) {
+    const changed = marketplace(); changed.plugins[0].source = source;
+    assert.deepEqual(checkMarketplace(changed, plugin), ['marketplace plugin source must remain ./']);
+  }
+});
+test('rejects marketplace version overrides and executable component additions', () => {
+  for (const extra of [{ version: '0.3.0' }, { mcpServers: {} }, { hooks: {} }]) {
+    const changed = marketplace(); Object.assign(changed.plugins[0], extra);
+    assert.deepEqual(checkMarketplace(changed, plugin), ['marketplace entry must use plugin manifest metadata without extra components']);
+  }
 });
 test('computes Unicode, duplicate, inline-code and underscore heading anchors outside fences', () => {
   assert.deepEqual([...anchors('# Étude `a_b`\n# Repeat\n# Repeat\n```md\n# Hidden\n```')], ['étude-a_b','repeat','repeat-1']);

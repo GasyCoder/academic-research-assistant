@@ -55,6 +55,29 @@ export function checkVersions(manifests, plugin) {
   if (!/^\d+\.\d+\.\d+$/u.test(manifests.formats.version)) errors.push('invalid internal formats version');
   return errors;
 }
+/** Repository policy for the single Skills-only plugin, not a general marketplace schema. */
+export function checkMarketplace(marketplace, plugin) {
+  const errors = [];
+  if (!marketplace || typeof marketplace !== 'object' || Array.isArray(marketplace))
+    return ['marketplace must be an object'];
+  if (marketplace.name !== 'gasycoder-academic-tools') errors.push('unexpected marketplace name');
+  if (marketplace.owner?.name !== 'GasyCoder') errors.push('marketplace owner must be GasyCoder');
+  if (typeof marketplace.description !== 'string' || !marketplace.description.trim())
+    errors.push('marketplace description is required');
+  if (!Array.isArray(marketplace.plugins) || marketplace.plugins.length !== 1)
+    return [...errors, 'marketplace must list exactly one plugin'];
+  const entry = marketplace.plugins[0];
+  if (!entry || typeof entry !== 'object' || Array.isArray(entry))
+    return [...errors, 'marketplace plugin entry must be an object'];
+  if (entry.name !== plugin.name) errors.push('marketplace plugin name differs from plugin manifest');
+  if (entry.source !== './') errors.push('marketplace plugin source must remain ./');
+  // The plugin manifest owns version/license; do not duplicate them in the catalog.
+  if (Object.keys(entry).some(key => !['name', 'source', 'description'].includes(key)))
+    errors.push('marketplace entry must use plugin manifest metadata without extra components');
+  if (typeof entry.description !== 'string' || !entry.description.trim())
+    errors.push('marketplace plugin description is required');
+  return errors;
+}
 export function markdownFiles(directory) {
   return readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
     if (['node_modules', '.git', 'dist', '.cache'].includes(entry.name)) return [];
