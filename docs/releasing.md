@@ -2,15 +2,16 @@
 
 ## Versioning policy
 
-The repository has one runtime component, the LanguageTool MCP server, so it uses **one
-version** for:
+The MCP runtime components (LanguageTool and Research Integrations) use **one version** for:
 
 - the Git tag of a release (`vX.Y.Z`);
-- the root `package.json` and `packages/languagetool-mcp/package.json`;
-- the version the MCP server reports in `serverInfo`, which is read from its
+- the root `package.json`, `packages/languagetool-mcp/package.json` and
+  `packages/research-integrations-mcp/package.json`;
+- the version each MCP server reports in `serverInfo`, which is read from its
   `package.json` at runtime.
 
-A test fails if the two `package.json` versions or the server version diverge.
+Tests check package/server versions against the root. The private Document Formats library
+keeps its existing 0.1.0 package version; Phase 9 adds no release, tag or publishing workflow.
 
 Versions follow [Semantic Versioning](https://semver.org/). Before 1.0.0, a minor version
 (`0.Y.0`) may add tools or change their contract, and a patch version (`0.Y.Z`) only fixes

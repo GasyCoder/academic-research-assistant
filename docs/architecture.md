@@ -17,8 +17,13 @@ AI Client
    +-- MCP Tools
           |
           +-- LanguageTool MCP
+          |      |
+          |      +-- Local LanguageTool Server
+          |
+          +-- Research Integrations MCP
                  |
-                 +-- Local LanguageTool Server
+                 +-- Crossref / OpenAlex / Zotero (authorized reads)
+                 +-- Vale (optional local style lint)
 ```
 
 ## Layers
@@ -66,3 +71,20 @@ LanguageTool, with UTF-16 findings mapped to their original segment and source u
 The API never writes files; DOCX is read-only and replacements are unapplied proposals.
 Research and Discipline Profiles remain contextual inputs to Skills, never parser policy
 or documents to update. Capabilities and limits: [document-formats.md](document-formats.md).
+
+### External Research Integrations
+
+`packages/research-integrations-mcp` provides a separate stdio MCP facade and small local
+library for deterministic read-only provider retrieval, normalization, provenance, comparisons,
+HTTP limits/errors/cache and optional Vale invocation. It never extends LanguageTool MCP or
+performs academic reasoning. Skills reason → integrations retrieve → Skills interpret.
+Provider metadata, internal document evidence and source-content evidence stay distinct.
+
+Crossref/OpenAlex web metadata and Zotero web/local reads require an explicit verification
+request or authorized announced workflow, enforced by a per-call networkConsent gate.
+Ordinary manuscript/scientific review remains local. The host retains document locations
+from Phase 8 and submits only necessary bibliographic fields, not files or paragraphs.
+No network setting, credential or provider preference is added to Research/Discipline
+Profiles. Vale is separately tagged local style lint on stdin, with trusted operator config,
+no shell, no automatic sync and no claimed source-offset equivalence with LT.
+Contract and provider sources: [research-integrations.md](research-integrations.md).
