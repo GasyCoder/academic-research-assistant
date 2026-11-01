@@ -63,9 +63,11 @@ Claude CLI; no fake marketplace or authenticated model session is claimed.
 - **Owner action:** review final release preparation and select actual distribution surfaces.
   The owner authorized 0.4.0 preparation; its coordinated bump belongs in the release PR.
   These intentional gates do not prevent local testing of private tarballs.
-- **SHOULD FIX before public release:** establish/verify a private security reporting channel,
-  clarify maintenance/backport expectations and finalize attribution/licence notices. No
-  private email or enabled GitHub advisory feature is assumed.
+- **BLOCKER before public release:** activate and verify private security reporting.
+  The GitHub read-only status check returned `enabled: false` on 2026-11-01; follow the
+  [owner checklist](../SECURITY.md#owner-activation-checklist). No alternative private
+  address is invented. This does not prevent local release preparation or final audit.
+- **SHOULD FIX:** clarify maintenance/backport and private report triage responsibilities.
 - **OPTIONAL:** Code of Conduct plus moderation process, a listing icon, broader OS/Claude
   host matrix, a future marketplace, owner-authorized publication automation and manual
   live-service CI. No token, publisher workflow or release action is configured now.

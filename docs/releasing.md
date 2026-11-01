@@ -46,8 +46,10 @@ policy applies. Do not use an all-workspaces bump that changes the internal libr
 4. Keep live tests opt-in: real LanguageTool and public metadata smoke tests need explicit
    service/network setup, private Zotero needs authorized credentials/items, real Vale needs
    trusted installed rules. Record exactly what ran and which checks were skipped.
-5. Finalize changelog/release notes, private security reporting/maintenance policy and actual
-   distribution targets. Open a focused release PR; require green CI for Node 20/22 and owner
+5. Finalize changelog/release notes, maintenance policy and actual distribution targets.
+   The owner must [activate and verify private security reporting](../SECURITY.md#owner-activation-checklist)
+   before public release: its last read-only status was `enabled: false` on 2026-11-01.
+   Open a focused release PR; require green CI for Node 20/22 and owner
    review of versions, licence, package contents, notes and clean-room evidence. Merge only
    with the separately authorized maintainer process.
 6. From the reviewed **clean main commit**, the owner may explicitly authorize creation/push
