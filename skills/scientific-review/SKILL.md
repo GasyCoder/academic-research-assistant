@@ -17,7 +17,7 @@ discipline, methodology and language, and judges only the text provided.
 | Grammar, spelling, punctuation | LanguageTool MCP, through the Academic Writing Skill |
 | Wording, clarity, concision, register, local coherence, rewriting | [Academic Writing Skill](../academic-writing/SKILL.md) |
 | Declared project context and conventions | [Research Profile Skill](../research-profile/SKILL.md) |
-| Internal citation/reference matching and attribution; support comparison when source content is supplied | [Citation Integrity](../citation-integrity/SKILL.md); this Skill only marks "requires citation verification"; external existence verification remains unavailable |
+| Internal citation/reference matching and attribution; support comparison when source content is supplied | [Citation Integrity](../citation-integrity/SKILL.md); this Skill only marks "requires citation verification"; optional external metadata tools need explicit authorization and cannot establish claim support |
 | Global consistency, alignment between sections, scope of claims, limitations | **This Skill** |
 
 When a finding is mainly about wording, do not analyse it here: note briefly that a writing

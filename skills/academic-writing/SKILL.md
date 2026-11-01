@@ -109,6 +109,13 @@ names depend on how the client registered the server (e.g. `mcp__languagetool__c
   `TEXT_TOO_LONG` is rejected before transmission: submit smaller sections within the limit.
 - Send only the text the user asked to have checked.
 
+An explicitly requested optional Vale style-guide check uses the separate
+[Research Integrations adapter](../../docs/research-integrations.md#optional-vale) when configured.
+Send only the eligible prose segment, retain its local source identity, and label Vale
+findings separately from LanguageTool/academic judgement. Vale line/span positions are
+engine-native, not verified UTF-16 source offsets. Never apply them directly through LT
+mapping, install/sync styles automatically, or treat lint as scientific validation.
+
 ## Severity
 
 - **Critical**: a substantial risk of changing meaning or misleading a reader about what was

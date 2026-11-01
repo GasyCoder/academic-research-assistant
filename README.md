@@ -23,6 +23,7 @@ Initial components:
 - Research Profile Skill (available, see below)
 - Citation Integrity Skill (available, see below)
 - Document Formats library (Markdown, LaTeX and DOCX inspection; see below)
+- Research Integrations MCP (opt-in metadata reads and optional local Vale; see below)
 
 ## LanguageTool MCP server
 
@@ -118,8 +119,10 @@ Citation Integrity. Validation scenarios:
 of visible citations, references and attribution in supplied materials: author-date and
 numeric matching, ambiguous or missing matches, duplicates and scoped orphan references.
 It distinguishes an internal match from actual claim support, comparing source passages
-only when supplied. No external verification is available yet: no network lookup, DOI
-existence certification, invented metadata or automatic misconduct accusations. Validation
+only when supplied. Explicitly requested metadata checks can use the separate research
+integration tools when available. Ordinary reviews stay local; provider absence is never
+fabrication, and metadata cannot prove claim support. No invented metadata or automatic
+misconduct accusations. Validation
 scenarios: [`evaluation/scenarios.md`](skills/citation-integrity/evaluation/scenarios.md).
 
 ## Research Profile
@@ -154,6 +157,16 @@ and passage locations, protected content and coverage limits; prose segments map
 diagnostics back to their source. It returns findings locations and replacement proposals,
 without editing originals, compiling TeX, rendering documents or promising DOCX write-back.
 The ordinary workspace tests, typecheck and build include this library.
+
+## Research Integrations
+
+[`packages/research-integrations-mcp`](docs/research-integrations.md) is a separate read-only
+MCP server for Crossref DOI/search, OpenAlex work lookup/search, Zotero item/search and
+optional local Vale prose lint. Metadata tools require explicit per-call network consent;
+they retain provider provenance, ambiguity and disagreements. Keys remain environment
+configuration. No library/document writes, silent manuscript transmission, publisher scraping,
+Vale installation/sync or universal reference-validity verdict is provided. The ordinary
+workspace checks use fake servers/executables; live provider tests are separately opt-in.
 
 ## Status
 
