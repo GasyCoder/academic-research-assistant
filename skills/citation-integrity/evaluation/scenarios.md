@@ -3,7 +3,10 @@
 All names, passages, titles and identifier strings below are synthetic fixtures, not real
 sources. Each scenario is independent. `Input`, `Expected` and `Forbidden` are stable fields
 for later automated evaluations; expectations are semantic assertions, not exact wording.
-This file is not loaded for ordinary reviews. No network calls are permitted in any case.
+This file is not loaded for ordinary reviews. These Phase 6 cases run without available
+integrations or network authorization; no network calls are permitted in any case. Optional
+authorized provider evidence is evaluated separately in the
+[Phase 9 scenarios](../../../docs/research-integrations-scenarios.md).
 
 For every non-trivial review, expect coverage (sections reviewed/not supplied, bibliography,
 source content, declared style or unknown, external lookup: no), evidence locations and

@@ -70,10 +70,13 @@ normalisation. Do not strip characters inside an identifier, guess a suffix or s
 repair punctuation that may belong to it. Syntax resemblance is not existence verification.
 
 The same visible DOI on two otherwise different entries is a metadata conflict or possible
-duplicate, not proof of identity. Always state "DOI existence has not been externally
-verified." Inventory URLs without opening them, testing accessibility, following redirects
-or saying "URL valid" from appearance. Official metadata and existence remain
-**external metadata verification required**, even for a familiar-looking work.
+duplicate, not proof of identity. Unless an authorized provider lookup was actually performed,
+state "DOI existence has not been externally verified." For optional provider evidence, follow
+the [external metadata workflow](../SKILL.md#optional-external-metadata-evidence), retain its
+provenance, ambiguity and disagreements, and distinguish it from internal/source-content
+evidence. Inventory URLs without opening them, testing accessibility, following redirects
+or saying "URL valid" from appearance. A familiar-looking work still needs external evidence;
+metadata agreement alone cannot certify claim support.
 
 ## Duplicates
 
