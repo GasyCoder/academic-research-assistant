@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-Authorized release-preparation target: **0.4.0**, pending final audit and owner release gates.
+Prepared version: **0.4.0**, pending final preparation audit and owner release gates.
 No release has been published by this work.
 
 - Academic Writing, Research Profile, Scientific Review and Citation Integrity Skills.
@@ -14,6 +14,8 @@ No release has been published by this work.
 - Regressions hardening format protection/mapping, HTTP redirects/backoff, credential
   redaction and metadata comparison. Metadata cannot establish claim support.
 - Owner-approved Apache-2.0 licence, matching package/plugin metadata and packaged licence copies.
+- Supported Node 20/22 development restored with bounded Vitest 4.1.12 and strict-engine CI installs.
+- Private vulnerability reporting activation/verification documented as an owner gate; currently disabled.
 - Distribution preparation: local Skills plugin, setup/config/privacy/contribution docs,
   examples, version/link validation and independent package-install checks.
 
@@ -21,6 +23,6 @@ No release has been published by this work.
 
 Historical LanguageTool MCP baseline: health/languages/text/long-document tools, bounded
 UTF-16/grapheme segmentation, resilience, structured coverage/errors and packaging checks.
-Later capabilities above remain Unreleased while development manifests still say 0.3.0.
+Later capabilities above remain Unreleased; prepared 0.4.0 manifests do not imply publication.
 Consult actual tags/history rather than inferring publication from manifests. Earlier
 v0.1.0/v0.2.0 tags predate synchronized manifest versions.

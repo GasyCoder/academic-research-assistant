@@ -5,8 +5,9 @@ scientific structure review and evidence-bound citation review, with optional lo
 tools and external metadata checks. It supports declared project context across disciplines.
 
 **License:** [Apache-2.0](LICENSE), explicitly selected by the owner.
-All npm packages remain private and unpublished. The current runtime version is 0.3.0;
-0.4.0 is the authorized release-preparation target, not a published version.
+All npm packages remain private and unpublished. Runtime/plugin version **0.4.0** is
+prepared on `release/0.4.0-prep`; it is not a published release or tag.
+Private security reporting still needs owner activation and verification before publication.
 [Third-party licences and notices](docs/third-party-notices.md) remain applicable.
 See [distribution status](docs/distribution.md) and the [release checklist](docs/releasing.md).
 

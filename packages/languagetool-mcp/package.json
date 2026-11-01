@@ -1,6 +1,6 @@
 {
   "name": "@gasycoder/languagetool-mcp",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "description": "Generic MCP server (stdio) exposing a local LanguageTool instance: health check, languages, text and long-document checks.",
   "keywords": [

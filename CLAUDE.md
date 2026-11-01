@@ -74,7 +74,7 @@ Do not hard-code researcher-specific information into reusable Skills.
 
 ## Current phase
 
-Phases 0–9 are implemented. Distribution preparation and owner release gates are documented
+Phases 0–10 are implemented and audited. Owner-authorized 0.4.0 release preparation and gates are documented
 in docs/distribution.md; do not infer permission to publish, tag or choose a licence.
 
 Before implementing a feature:

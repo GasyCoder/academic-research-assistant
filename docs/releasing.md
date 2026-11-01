@@ -2,9 +2,10 @@
 
 **No release is authorized by these instructions alone.** Phase 10 creates no tag, push,
 npm publication, GitHub Release, marketplace listing or credential configuration.
-Current runtime/plugin version: 0.3.0; latest historical tag: v0.3.0. Proposed next version:
-**0.4.0**, not 1.0.0, because optional capabilities were added after the LanguageTool baseline
+Prepared runtime/plugin version: **0.4.0**, unreleased; latest historical tag: v0.3.0.
+The owner approved this pre-1.0 minor because optional capabilities were added after the LanguageTool baseline
 and public stability/distribution policies remain pre-1.0. [Draft notes](release-notes-0.4.0-draft.md).
+Observed results and remaining gates: [0.4.0 preparation record](release-preparation-0.4.0.md).
 
 ## Version contract
 
@@ -20,24 +21,27 @@ No deprecation mechanism is needed for a demonstrated break in this phase. Histo
 v0.1.0/v0.2.0 tags preceded manifest synchronization; from v0.3.0 the runtime tag/manifest
 policy applies. Do not use an all-workspaces bump that changes the internal library by accident.
 
-## Exact next release procedure (owner only, not executed)
+## Release preparation and remaining owner procedure
 
 1. Verify the owner's approved [Apache-2.0 LICENSE](../LICENSE), matching package/plugin
    SPDX metadata and packaged licence copies. The owner resolved the previously open choice
    after the Phase 10 audit. Review [third-party notices](third-party-notices.md).
-2. Review the independent audit; start a dedicated release-preparation branch from clean,
-   current main. Approve 0.4.0 or document a different target. Update only root, the two MCP
-   manifests and plugin version, and refresh the lockfile. For the proposed target:
+2. Review the Phase 10 audit and final preparation diff. The owner requested
+   `release/0.4.0-prep` from audited `fff8154`, retaining the unmerged distribution work;
+   no merge into main was performed. The authorized preparation bump updates only root,
+   the two MCP manifests and plugin version, plus the lockfile. The command used was:
 
    ```sh
    npm version 0.4.0 --no-git-tag-version --include-workspace-root \
      --workspace @gasycoder/languagetool-mcp --workspace @gasycoder/research-integrations-mcp
    ```
 
-   Update plugin.json to that same version, refresh/review the lock and verify with
+   This bump is already applied; do not rerun it on unchanged 0.4.0 manifests.
+   Plugin.json was updated to the same version. Review the lock and verify with
    `npm run validate:distribution`. Keep internal formats/schema versions unless their
    own contracts changed. Update CHANGELOG, draft notes and inventory version references.
-3. In an independent clone/snapshot, run `npm ci` then `npm run check` under Node 20 and 22.
+3. In an independent clone/snapshot, run `npm ci --engine-strict` then `npm run check`
+   under Node 20 and 22 (development floors 20.19 / 22.12 with the locked Vite dependency).
    Check includes all package tests/builds, synthetic examples, tarball allowlists and
    independent install/import/bin checks. Also run `git diff --check`, `npm audit` and
    `npm audit --omit=dev`; inspect findings rather than running an automatic fix.

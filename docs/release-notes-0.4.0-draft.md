@@ -1,8 +1,9 @@
-# Draft release notes — proposed 0.4.0
+# Draft release notes — prepared 0.4.0
 
-**Unpublished draft.** The owner selected Apache-2.0 and authorized 0.4.0 preparation.
+**Unpublished draft.** The owner selected Apache-2.0; runtime/plugin 0.4.0 is prepared locally.
 Final preparation audit and owner release gates remain outstanding. These notes are not
-a tag, release or npm publication.
+a tag, release or npm publication. Root/internal packages remain private.
+Development uses Vitest 4.1.12 on Node 20.19+ / 22.12+, with strict-engine installs required.
 
 Since the LanguageTool-focused v0.3.0 baseline: Academic Writing, declared Research Profile
 context, Scientific Review and Citation Integrity Skills; five optional Discipline Profiles
