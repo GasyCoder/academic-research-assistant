@@ -22,5 +22,5 @@ npm run test:live --workspace @gasycoder/research-integrations-mcp  # opt-in, re
 ```
 
 Tools, statuses, configuration, limits and the provider contracts:
-[docs/research-integrations.md](../../docs/research-integrations.md).
-Scenarios: [docs/research-integrations-scenarios.md](../../docs/research-integrations-scenarios.md).
+[docs/research-integrations.md](https://github.com/GasyCoder/academic-research-assistant/blob/main/docs/research-integrations.md).
+Scenarios: [docs/research-integrations-scenarios.md](https://github.com/GasyCoder/academic-research-assistant/blob/main/docs/research-integrations-scenarios.md).

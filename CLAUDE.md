@@ -2,7 +2,8 @@
 
 ## Project
 
-Academic Research Assistant is a generic, open-source academic research assistant.
+Academic Research Assistant is a generic public research toolkit intended for open-source
+distribution once its owner selects a licence. Do not assume a licence grant before then.
 
 It must remain reusable across:
 
@@ -73,7 +74,8 @@ Do not hard-code researcher-specific information into reusable Skills.
 
 ## Current phase
 
-The repository is in its initial architecture phase.
+Phases 0–9 are implemented. Distribution preparation and owner release gates are documented
+in docs/distribution.md; do not infer permission to publish, tag or choose a licence.
 
 Before implementing a feature:
 

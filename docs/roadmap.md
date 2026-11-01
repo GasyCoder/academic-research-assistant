@@ -1,80 +1,29 @@
-# Roadmap
+# Roadmap and current status
 
-## Phase 0 — Foundation
+Phases 0–9 are completed and merged. Phase 10 consolidates distribution preparation;
+technical readiness and owner release/licence gates are tracked separately.
 
-- Repository structure
-- Architecture documentation
-- Agent guidelines
-- Development conventions
+| Phase | Delivered scope/status |
+| --- | --- |
+| 0 — Foundation | Repository structure, architecture and agent conventions; complete |
+| 1 — LanguageTool MCP | Health, languages, text tools and tests; complete |
+| 2 — MCP Quality | Long-document segmentation, coverage, resilience, packaging and compatibility; complete |
+| 3 — Academic Writing | Generic meaning-preserving writing Skill; complete |
+| 4 — Research Profile | Declared optional project context, schema and safe validation; complete |
+| 5 — Scientific Review | Evidence-bound structural/consistency review; complete |
+| 6 — Citation Integrity | Internal matching/attribution safeguards; complete |
+| 7 — Discipline Profiles | Explicitly selected generic guidance and validation; complete |
+| 8 — Document Formats | Local Markdown, conservative LaTeX, read-only DOCX and source mapping; complete |
+| 9 — Research Ecosystem Integrations | Read-only Crossref/OpenAlex/Zotero, explicit provenance/consent and optional Vale; complete |
+| 10 — Distribution & Release Readiness | Local plugin, install/docs/examples, package/link/version checks and release preparation; pending independent audit and owner actions |
 
-## Phase 1 — LanguageTool MCP
+No new academic feature/provider/parser is introduced in Phase 10. Current distribution is
+clone/local, packages private. [Licence/publication gates](distribution.md#release-gates)
+and [Phase 10 results](distribution-results.md) control any release claim.
 
-- health_check
-- get_supported_languages
-- check_text
-- structured errors
-- unit tests
-- integration tests
+## Future backlog (not a new numbered phase)
 
-## Phase 2 — MCP Quality
-
-- long-text chunking
-- resilience improvements
-- compatibility testing
-- performance validation
-- packaging improvements
-
-## Phase 3 — Academic Writing Skill
-
-Generic academic and scientific writing guidance.
-
-## Phase 4 — Research Profile
-
-Dynamic configuration for:
-
-- discipline
-- field
-- methodology
-- document type
-- language
-- citation style
-- journal requirements
-
-## Phase 5 — Scientific Review
-
-Structured manuscript review.
-
-## Phase 6 — Citation Integrity
-
-Reference and citation safeguards.
-
-## Phase 7 — Discipline Profiles
-
-Optional discipline-specific extensions.
-
-## Phase 8 — Document Formats
-
-Potential support for:
-
-- Markdown
-- LaTeX
-- DOCX
-
-## Phase 9 — Research Ecosystem Integrations
-
-Potential integrations:
-
-- Zotero
-- Crossref
-- OpenAlex
-- DOI validation
-- Vale
-
-## Phase 10 — Distribution
-
-- documentation
-- examples
-- CI
-- release process
-- MCP distribution
-- Claude Code plugin packaging
+Owner licence/publication policy and private reporting channel; broader OS/host validation;
+optional community conduct/moderation policy; marketplace/publishing automation only after
+explicit decisions. Parser/provider coverage and public API stability may be evaluated
+separately. No new numbered phase, document writer or external integration is authorized here.
