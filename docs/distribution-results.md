@@ -3,7 +3,8 @@
 Historical Phase 10 record, preserved as observed before owner release decisions.
 The owner subsequently selected Apache-2.0; see the current [release procedure](releasing.md)
 and [third-party licence review](third-party-notices.md). Historical findings below are not
-a statement that the licence decision is still open.
+a statement that the licence decision is still open. Vitest 5 was subsequently replaced
+with bounded Vitest 4.1.12; strict installs and full checks now pass under Node 20 and 22.
 
 Technical scope: release preparation only, on `feat/distribution` above `af860f0`.
 No new academic Skill/provider/parser/format was added. No push, merge, tag, publication,

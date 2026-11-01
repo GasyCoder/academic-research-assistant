@@ -4,12 +4,11 @@ This repository uses the owner-approved [Apache-2.0 licence](LICENSE). Preserve 
 [third-party notices](docs/third-party-notices.md); publication still needs explicit approval.
 
 Use a focused branch from main, preserve unrelated work and keep commits atomic. Read
-README, CLAUDE, AGENTS and docs/architecture before code changes. Install with `npm ci`
-on an official full-ICU Node 22 build, version 22.12 or later, then `npm run check`.
-Node 20 compatibility checks pass with an `EBADENGINE` warning, but the locked Vitest 5
-does not support Node 20 and strict-engine development installation fails. See the
-[audit finding](docs/distribution-audit.md#development-toolchain-node-20) before changing
-the toolchain or its supported versions. Standard tests need no Java/key;
+README, CLAUDE, AGENTS and docs/architecture before code changes. Install with
+`npm ci --engine-strict` on an official full-ICU Node 20.19+ or Node 22.12+ build, then
+`npm run check`. Vitest is bounded to `~4.1.12`; do not upgrade beyond the supported
+Node matrix without reviewing engines and replaying both strict-install checks.
+Standard tests need no Java/key;
 tarball checks use npm, not live providers.
 
 Keep infrastructure, linguistic engines, reasoning, formats and profiles separate. Validate

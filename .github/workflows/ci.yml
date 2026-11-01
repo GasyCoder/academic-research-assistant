@@ -45,7 +45,7 @@ jobs:
         run: npm run validate:skills
 
       - name: Install
-        run: npm ci
+        run: npm ci --engine-strict
 
       - name: Validate research profiles
         run: npm run validate:profiles
