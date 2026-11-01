@@ -1,6 +1,6 @@
 {
   "name": "academic-research-assistant",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -18,7 +18,8 @@
     "pack:check:resources": "node scripts/check-distribution.mjs",
     "validate:skills": "node --test scripts/validate-skills.test.mjs && node scripts/validate-skills.mjs",
     "validate:profiles": "node --test scripts/validate-profiles.test.mjs && node scripts/validate-profiles.mjs",
-    "validate:disciplines": "node --test scripts/validate-disciplines.test.mjs && node scripts/validate-disciplines.mjs"
+    "validate:disciplines": "node --test scripts/validate-disciplines.test.mjs && node scripts/validate-disciplines.mjs",
+    "marketplace:check": "node scripts/check-marketplace.mjs"
   },
   "engines": {
     "node": ">=20"

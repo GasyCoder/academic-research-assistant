@@ -1,90 +1,91 @@
 # Versioning and release preparation
 
-**No release is authorized by these instructions alone.** Phase 10 creates no tag, push,
-npm publication, GitHub Release, marketplace listing or credential configuration.
-Prepared runtime/plugin version: **0.4.0**, unreleased; latest historical tag: v0.3.0.
-The owner approved this pre-1.0 minor because optional capabilities were added after the LanguageTool baseline
-and public stability/distribution policies remain pre-1.0. [Draft notes](release-notes-0.4.0-draft.md).
-Observed results and remaining gates: [0.4.0 preparation record](release-preparation-0.4.0.md).
-Final countercheck and procedure correction: [release preparation audit](release-preparation-0.4.0-audit.md).
+These instructions authorize no push, merge, tag, npm publication, GitHub Release or public
+plugin-directory submission. Current prepared runtime/plugin version: **0.4.1**, on
+`feat/marketplace-distribution`. Latest historical release/tag: **v0.4.0**, preserved.
+This patch adds Git marketplace distribution and host setup instructions only; no new
+academic/scientific feature or runtime behavior. [Draft notes](release-notes-0.4.1-draft.md).
 
 ## Version contract
 
-Root package.json is the runtime source of truth. Both MCP manifests, their serverInfo
-(read from their manifests) and `.claude-plugin/plugin.json` follow it. Document Formats is
-an internal private library with its existing independent 0.1.0 version. Schema versions
-`profileVersion`, `disciplineProfileVersion` and document modelVersion remain independent.
-`npm run validate:distribution` enforces runtime/plugin synchronization and private flags.
+Root package.json is the coordinated runtime source of truth. Both MCP manifests and their
+serverInfo (read from package metadata), lockfile and `.claude-plugin/plugin.json` follow it.
+Document Formats remains an internal private library with its independent **0.1.0** version.
+Schema/model versions remain independent. `validate:distribution` checks versions, private
+flags, Apache-2.0 metadata, licence copies, links and the marketplace catalog contract.
 
-Before 1.0, minor versions may add/change contracts with documented migration; patches fix
-defects. Additions since v0.3.0 do not claim a break to the existing LanguageTool tool API.
-No deprecation mechanism is needed for a demonstrated break in this phase. Historical
-v0.1.0/v0.2.0 tags preceded manifest synchronization; from v0.3.0 the runtime tag/manifest
-policy applies. Do not use an all-workspaces bump that changes the internal library by accident.
+`.claude-plugin/marketplace.json` retains name `gasycoder-academic-tools`, one entry named
+`academic-research-assistant` and source `./`. The root plugin manifest supplies its version
+and licence; the catalog does not duplicate these fields or embed components. Do not change
+an install identity as a side effect of a version bump. The root source carries the four
+Skills and linked docs/profiles/schemas from the full Git tree.
 
-## Release preparation and remaining owner procedure
+Before 1.0, minor versions may add/change documented contracts; patches fix defects or
+improve distribution without new academic behavior. The owner-authorized 0.4.1 bump used:
 
-1. Verify the owner's approved [Apache-2.0 LICENSE](../LICENSE), matching package/plugin
-   SPDX metadata and packaged licence copies. The owner resolved the previously open choice
-   after the Phase 10 audit. Review [third-party notices](third-party-notices.md).
-2. Review the Phase 10 audit and final preparation diff. The owner requested
-   `release/0.4.0-prep` from audited `fff8154`, retaining the unmerged distribution work;
-   no merge into main was performed. The authorized preparation bump updates only root,
-   the two MCP manifests and plugin version, plus the lockfile. The command used was:
+```sh
+npm version 0.4.1 --no-git-tag-version --include-workspace-root \
+  --workspace @gasycoder/languagetool-mcp --workspace @gasycoder/research-integrations-mcp
+```
+
+Then plugin.json was synchronized. The command is already applied; do not repeat it on
+unchanged 0.4.1 manifests. Avoid an all-workspaces bump that changes internal Formats.
+
+## Preparation and final review
+
+1. Keep the exact owner-approved Apache-2.0 LICENSE and workspace copies, SPDX metadata and
+   [third-party notices](third-party-notices.md). Review the intended distribution surface;
+   Git marketplace distribution does not grant permission for npm publication.
+2. Run `npm ci --engine-strict` and `npm run check` on Node 20/22 (development floors
+   20.19 / 22.12 with locked Vite). Check includes validators, typecheck, tests, build,
+   example, tarball inventories and isolated installs. Run `npm audit`, `npm audit --omit=dev`,
+   `git diff --check` and pack dry-runs. Keep real service tests explicitly opt-in.
+3. Validate **both** the root plugin and marketplace manifest:
 
    ```sh
-   npm version 0.4.0 --no-git-tag-version --include-workspace-root \
-     --workspace @gasycoder/languagetool-mcp --workspace @gasycoder/research-integrations-mcp
+   claude plugin validate .
+   claude plugin validate .claude-plugin/marketplace.json
    ```
 
-   This bump is already applied; do not rerun it on unchanged 0.4.0 manifests.
-   Plugin.json was updated to the same version. Review the lock and verify with
-   `npm run validate:distribution`. Keep internal formats/schema versions unless their
-   own contracts changed. Update CHANGELOG, draft notes and inventory version references.
-3. In an independent clone/snapshot, run `npm ci --engine-strict` then `npm run check`
-   under Node 20 and 22 (development floors 20.19 / 22.12 with the locked Vite dependency).
-   Check includes all package tests/builds, synthetic examples, tarball allowlists and
-   independent install/import/bin checks. Also run `git diff --check`, `npm audit` and
-   `npm audit --omit=dev`; inspect findings rather than running an automatic fix.
-   Inspect `npm pack --dry-run` for each selected package. Verify the local plugin with
-   `claude plugin validate .`; directory acceptance requires licence and listing decisions.
-4. Keep live tests opt-in: real LanguageTool and public metadata smoke tests need explicit
-   service/network setup, private Zotero needs authorized credentials/items, real Vale needs
-   trusted installed rules. Record exactly what ran and which checks were skipped.
-5. Finalize changelog/release notes, maintenance policy and actual distribution targets.
-   The owner must [activate and verify private security reporting](../SECURITY.md#owner-activation-checklist)
-   **before merge or release**: confirm `enabled: true` and a reporter-accessible private
-   form, then record the verification. Its last read-only status was `enabled: false`
-   on 2026-11-01. Do not treat a documentation update as activation.
-   Open a focused release PR; require green CI for Node 20/22 and owner
-   review of versions, licence, package contents, notes and clean-room evidence. Any npm
-   publication-policy/metadata changes need approval, a reviewed commit and repeated checks
-   before selecting a release tag commit. Merge only through the separately authorized
-   maintainer process, after the security gate above.
-6. On the reviewed **clean main commit**, wait for main CI to pass on **both Node 20 and 22
-   for that exact commit**. Recheck root, both MCP manifests/serverInfo, plugin and lockfile
-   at 0.4.0, internal Formats at 0.1.0, licence metadata and intended private flags. If another
-   release commit or any change is needed, review it and repeat the checks/main CI before
-   tagging; no newer unreviewed commit may enter the release.
+   In a fresh temporary Claude configuration, add the local marketplace, install at user
+   scope, inspect `plugin details`, then launch `claude` without `--plugin-dir`. Confirm all
+   four namespaced Skills and zero bundled MCPs/hooks. Also verify Git clone installation
+   when practical; local folder success alone does not exercise the Git checkout path.
+   [Client setup](client-setup.md) documents exact commands and Web/MCP distinctions.
+4. Review README, Unreleased changelog and draft notes; do not claim the new remote catalog
+   works before its files reach the remote default branch. The Web user path is a Git
+   marketplace in Customize; organization sync and public directory listing are separate
+   mechanisms. Record browser verification honestly; local CLI startup is not a Web test.
 
-   Only after these gates may the owner explicitly authorize an **annotated** v0.4.0 tag
-   on that exact commit, following the repository's historical annotated-tag policy.
-   Use a signed annotated tag only when the maintainer has configured/approved signing.
-   Verify the tag target and annotation before any separately authorized tag push.
-7. npm publication is optional and separately authorized for specific MCP packages, never
-   root/internal Formats or every workspace. All packages in the current preparation remain
-   private: **skip this step** unless a publication-policy change was approved, committed,
-   checked and included in the reviewed tag commit through steps 5–6. The current validator
-   intentionally refuses private=false; changing that policy requires explicit review.
-   Publish only the approved artifacts from the clean tagged commit with owner-managed
-   credentials. Do not edit private/version metadata after tagging and publish different
-   untagged contents as that release. Later policy changes require a later reviewed release.
-8. Only after the reviewed tag has been pushed, and any explicitly selected npm publication
-   has completed, may the owner separately authorize a GitHub Release from that tag with
-   the reviewed notes. If npm publication was not selected, it is not a GitHub Release gate.
-   No tag, push, npm publication or GitHub Release is performed by these instructions or CI.
+## Owner-controlled merge and release gates
 
-The package scripts themselves do not tag/push/publish. [Distribution gates](distribution.md#release-gates)
-remain visible even when technical checks pass. No marketplace exists: clone/local plugin
-usage is the supported path. No release workflow is added before licence/publishing policy
-and credentials are defined.
+1. Verify private reporting is enabled and the private form is accessible using
+   [SECURITY's checklist](../SECURITY.md#owner-activation-checklist). A read-only API check
+   on 2026-11-01 returned `enabled: true`; that observation alone does not test the form.
+   Earlier preparation/audit reports and SECURITY contain their historical disabled status;
+   the owner should record current verification before release. Never change repository
+   settings or publish personal contact information as a side effect of these checks.
+2. Obtain final independent audit and owner review of the diff, installation evidence,
+   versions, notices, notes and host limitations. Require green Node 20/22 PR CI. Merge only
+   when separately authorized. Any publication-policy changes need their own reviewed,
+   checked commit before selecting a release tag commit.
+3. On clean reviewed main, wait for green Node 20/22 CI for **that exact commit**. Recheck
+   0.4.1 across root/MCPs/serverInfo/plugin/lock and Formats 0.1.0. Any further release commit
+   requires renewed review/checks/main CI. Confirm no newer unreviewed change entered main.
+4. Only with separate owner authorization create an **annotated v0.4.1** tag on that commit,
+   verify target/annotation, then push the selected tag if explicitly authorized. Use a
+   signed annotated tag only with maintainer-approved signing. Preserve the v0.4.0 tag and
+   release; this patch never deletes or recreates them.
+5. npm is optional and separately authorized. All current packages remain private; skip
+   publication for this preparation. Root and Formats stay internal. Publish a selected MCP
+   only if an explicit policy/metadata/check change was reviewed before tagging; never edit
+   metadata after tagging and publish different untagged contents under that release.
+6. Only after an authorized tag push and any selected npm publication may the owner authorize
+   a GitHub Release with reviewed notes. No npm publication is required for the Skills Git
+   marketplace. Confirm remote marketplace installation after authorized integration; users
+   can then add `GasyCoder/academic-research-assistant` and install the named plugin.
+
+No publisher/token workflow is added. A Git-hosted catalog is not an Anthropic directory
+submission. The existing [0.4.0 preparation](release-preparation-0.4.0.md) and
+[audit](release-preparation-0.4.0-audit.md) are historical evidence; their version-specific
+commands do not replace this patch procedure.

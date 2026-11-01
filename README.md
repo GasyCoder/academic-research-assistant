@@ -5,9 +5,10 @@ scientific structure review and evidence-bound citation review, with optional lo
 tools and external metadata checks. It supports declared project context across disciplines.
 
 **License:** [Apache-2.0](LICENSE), explicitly selected by the owner.
-All npm packages remain private and unpublished. Runtime/plugin version **0.4.0** is
-prepared on `release/0.4.0-prep`; it is not a published release or tag.
-Private security reporting still needs owner activation and verification before publication.
+All npm packages remain private and unpublished. Runtime/plugin version **0.4.1** is
+prepared on `feat/marketplace-distribution` for Git marketplace installation. It is not
+a published patch release; the latest release is v0.4.0. This patch adds installation
+support and documentation, with no new academic capability.
 [Third-party licences and notices](docs/third-party-notices.md) remain applicable.
 See [distribution status](docs/distribution.md) and the [release checklist](docs/releasing.md).
 
@@ -54,25 +55,38 @@ to an **unapplied** proposal. It needs no LanguageTool, Vale, provider account o
 Installation needs npm registry access or a prepared cache; the example itself uses no network
 and changes no input. [Worked workflow and profiles](examples/README.md).
 
-## Use the Skills in Claude Code
+## Install the Skills plugin from the Git marketplace
 
-After cloning, load the local Skills plugin:
+Once this marketplace preparation is merged and made available in the remote repository,
+Claude Code users can run these shell commands (no local build or npm package needed):
 
 ```sh
-claude plugin validate .
-claude --plugin-dir .
+claude plugin marketplace add GasyCoder/academic-research-assistant
+claude plugin install academic-research-assistant@gasycoder-academic-tools --scope user
+claude
 ```
 
-For example, in that session:
+The catalog is `gasycoder-academic-tools`; the plugin is `academic-research-assistant`.
+After installation, start Claude normally, **without `--plugin-dir`**. For example:
 
 ```text
 /academic-research-assistant:academic-writing Review clarity in examples/manuscript.md; do not rewrite or perform external lookups.
 ```
 
-Four Skills are discovered under `skills/`. No MCP or hook starts automatically; no
-marketplace is configured/published. Keep the full clone, including linked docs, schemas and
-profiles. Root CLAUDE.md is developer guidance, not plugin context. See
-[client/plugin setup](docs/client-setup.md) for details and manual MCP registration.
+For **Claude Web chat**, open **Customize → Plugins → Add → Add marketplace**, choose
+**Add from a repository**, and enter `GasyCoder/academic-research-assistant` (or its GitHub
+URL). Find `academic-research-assistant` in that marketplace and add it. Its four Skills
+can be selected through `/` or `+`. Availability depends on your plan and organization policy.
+
+For **local development**, clone the repository and use `claude --plugin-dir .` to load
+the current files for that session. This is separate from an installed marketplace plugin;
+use one loading method at a time to avoid testing an older installed copy.
+
+The plugin supplies four Skills and their linked resources. It bundles **no MCP server or
+hook**. Skills can work in Web chat; local LanguageTool/Research Integrations MCPs need
+separate registration in Claude Code or a supported Cowork environment and do not start
+automatically in Web chat. Root CLAUDE.md is developer guidance, not plugin context.
+[Client setup](docs/client-setup.md) covers local testing, Git installation and host limits.
 
 ## Optional local LanguageTool
 
@@ -125,6 +139,7 @@ reported as coverage limits. A missing record is never proof of fabrication.
 npm run check                  # validators, typecheck, tests, build, tarball/install checks
 npm run validate:distribution  # versions, local links, plugin and synthetic profiles
 npm run pack:check             # independent tarball installation and import/bin smoke tests
+npm run marketplace:check      # explicit Claude CLI test: isolated folder/Git installs and Skill discovery
 ```
 
 Standard tests use local fake services/executables. Install checks may use npm, never live

@@ -15,7 +15,7 @@ technical readiness and owner release/licence gates are tracked separately.
 | 7 — Discipline Profiles | Explicitly selected generic guidance and validation; complete |
 | 8 — Document Formats | Local Markdown, conservative LaTeX, read-only DOCX and source mapping; complete |
 | 9 — Research Ecosystem Integrations | Read-only Crossref/OpenAlex/Zotero, explicit provenance/consent and optional Vale; complete |
-| 10 — Distribution & Release Readiness | Local plugin, install/docs/examples, package/link/version checks and release preparation; [final audit completed](distribution-audit.md), Apache-2.0 adopted and Node 20 tooling issue resolved; 0.4.0 preparation awaits final audit and security owner action |
+| 10 — Distribution & Release Readiness | Local plugin, install/docs/examples, package/link/version checks and release preparation; [final audit completed](distribution-audit.md), Apache-2.0 adopted and Node 20 tooling issue resolved; v0.4.0 released; v0.4.1 prepares Git marketplace installation for the existing Skills only |
 
 No new academic feature/provider/parser is introduced in Phase 10. Current distribution is
 clone/local, packages private. [Licence/publication gates](distribution.md#release-gates)
@@ -24,6 +24,6 @@ and [Phase 10 results](distribution-results.md) control any release claim.
 ## Future backlog (not a new numbered phase)
 
 Owner publication policy and activation/verification of private reporting; broader OS/host validation;
-optional community conduct/moderation policy; marketplace/publishing automation only after
+optional community conduct/moderation policy; publishing automation only after
 explicit decisions. Parser/provider coverage and public API stability may be evaluated
 separately. No new numbered phase, document writer or external integration is authorized here.
