@@ -239,12 +239,13 @@ export function zoteroMetadata(raw: unknown, libraryPrefix: string): Metadata {
     throw new IntegrationError('INVALID_RESPONSE');
   }
   const data = object(record.data);
+  const rawDoi = d.text(data.DOI, 'doi');
   const date = d.text(data.date, 'date');
   const dateYear = date ? /(?:^|\D)([12]\d{3})(?:\D|$)/u.exec(date) : null;
   return d.finish({
     provider: 'zotero',
     providerRecordId: `${libraryPrefix}/items/${key}`,
-    doi: d.doi(data.DOI),
+    doi: d.doi(rawDoi),
     title: d.text(data.title, 'title'),
     authors: d.authors(data.creators, (c) => withoutEmpty({
       name: d.text(c.name, 'creator.name'),
@@ -261,7 +262,7 @@ export function zoteroMetadata(raw: unknown, libraryPrefix: string): Metadata {
     pages: d.text(data.pages, 'pages'),
     type: d.text(data.itemType, 'itemType'),
     url: d.url(data.url, 'url'),
-    identifiers: { zotero: key, ...(typeof data.DOI === 'string' && data.DOI ? { doi: data.DOI } : {}) },
+    identifiers: { zotero: key, ...(rawDoi ? { doi: rawDoi } : {}) },
   });
 }
 
@@ -344,8 +345,16 @@ function compareAuthor(expected: string, authors: Metadata['authors']): Comparis
     return { field: 'author', expected, state: 'not_available', note: AUTHOR_NOTE };
   }
   const wanted = normalizeText(expected);
-  // Only a full multi-word byline string counts as a match; a lone surname is never enough.
-  if (wanted.includes(' ') && names.some((name) => normalizeText(name) === wanted)) {
+  // Exact initial strings and multi-word family names do not establish full-name agreement.
+  const initials = (name: string) => name.split(/[\s-]+/u).some(token =>
+    /^\p{L}\.?$/u.test(token) || /^(?:\p{L}\.)+$/u.test(token));
+  const fullMatch = people.some(person => {
+    const name = person.name ?? [person.given, person.family].filter(Boolean).join(' ');
+    if (!wanted.includes(' ') || initials(name) || normalizeText(name) !== wanted) return false;
+    if (person.name) return true;
+    return Boolean(person.given?.trim() && person.family?.trim());
+  });
+  if (fullMatch) {
     return { field: 'author', expected, observed: names, state: 'matched', note: AUTHOR_NOTE };
   }
   const familyNames = people.map((a) => a.family).filter((f): f is string => Boolean(f)).map(normalizeText);
@@ -395,7 +404,11 @@ export function compareProviderRecords(records: EvidenceRecord[]): ProviderCompa
       const value = metadata[field];
       return value === undefined ? [] : [{ provider: metadata.provider, providerRecordId: metadata.providerRecordId, value }];
     });
-    const keys = new Set(observations.map(({ value }) => (typeof value === 'string' ? titleKey(value) : value)));
+    const keys = new Set(observations.map(({ value }) => {
+      if (typeof value !== 'string') return value;
+      if (field === 'doi') return normalizeDoi(value) ?? normalizeText(value);
+      return field === 'title' ? titleKey(value) : normalizeText(value);
+    }));
     if (keys.size > 1) {
       differences.push({ field, observations });
     }

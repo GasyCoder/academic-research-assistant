@@ -82,17 +82,19 @@ export function secretsOf(config: Config): string[] {
   );
 }
 
-/** Percent-decodes up to three times, tolerating malformed or partial escapes. */
+/** Percent-decodes to a fixed point. Every changing pass shortens the bounded input. */
 function decodedForms(value: string): string[] {
   const forms = [value];
   let current = value;
-  for (let round = 0; round < 3 && /%[0-9a-f]{2}/iu.test(current); round += 1) {
+  while (/%[0-9a-f]{2}/iu.test(current)) {
+    const previous = current;
     try {
       current = decodeURIComponent(current);
     } catch {
       current = current.replace(/%([0-9a-f]{2})/giu, (_match, hex: string) => String.fromCharCode(parseInt(hex, 16)));
     }
     forms.push(current);
+    if (current === previous) break;
   }
   return forms;
 }

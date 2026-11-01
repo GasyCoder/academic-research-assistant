@@ -97,17 +97,7 @@ export class JsonClient {
       if (answered) {
         return answered;
       }
-      const cooldown = state.cooldownUntil - this.now();
-      if (cooldown > 0) {
-        throw new IntegrationError('CLIENT_COOLDOWN', undefined, Math.ceil(cooldown));
-      }
-      const wait = state.nextAt - this.now();
-      if (wait > this.maxPacingWait) {
-        throw new IntegrationError('CLIENT_COOLDOWN', undefined, Math.ceil(wait));
-      }
-      if (wait > 0) {
-        await this.sleep(wait);
-      }
+      await this.waitForTurn(state);
       const response = await this.fetchJson(request, state);
       if (request.cache && this.config.cacheTtlMs > 0) {
         if (this.cache.size >= LIMITS.cacheEntries) {
@@ -141,6 +131,22 @@ export class JsonClient {
     return state;
   }
 
+  /** Redirects are requests too: provider cooldowns and pacing apply to every hop. */
+  private async waitForTurn(state: OriginState, signal?: AbortSignal): Promise<void> {
+    const cooldown = state.cooldownUntil - this.now();
+    if (cooldown > 0) throw new IntegrationError('CLIENT_COOLDOWN', undefined, Math.ceil(cooldown));
+    const wait = state.nextAt - this.now();
+    if (wait > this.maxPacingWait) throw new IntegrationError('CLIENT_COOLDOWN', undefined, Math.ceil(wait));
+    if (signal?.aborted) throw new IntegrationError('TIMEOUT');
+    if (wait <= 0) return;
+    if (!signal) { await this.sleep(wait); return; }
+    await new Promise<void>((resolve, reject) => {
+      const abort = () => reject(new IntegrationError('TIMEOUT'));
+      signal.addEventListener('abort', abort, { once: true });
+      this.sleep(wait).then(resolve, reject).finally(() => signal.removeEventListener('abort', abort));
+    });
+  }
+
   private async fetchJson(request: GetRequest, state: OriginState): Promise<JsonResponse> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.config.timeoutMs);
@@ -169,6 +175,7 @@ export class JsonClient {
           }
           redirects += 1;
           url = target;
+          await this.waitForTurn(state, controller.signal);
           continue;
         }
         if (response.status === 404) {
@@ -229,7 +236,7 @@ export class JsonClient {
     const interval = /^(\d+(?:\.\d+)?)s$/u.exec(response.headers.get('x-rate-limit-interval') ?? '');
     const seconds = interval ? Number(interval[1]) : NaN;
     // Absurd or non-finite windows are ignored rather than turned into a permanent cooldown.
-    if (Number.isFinite(limit) && limit > 0 && Number.isFinite(seconds) && seconds <= 60) {
+    if (Number.isSafeInteger(limit) && limit > 0 && Number.isFinite(seconds) && seconds > 0 && seconds <= 60) {
       state.nextAt = Math.max(state.nextAt, this.now() + Math.ceil((seconds * 1000) / limit));
     }
   }
@@ -275,10 +282,10 @@ function delayMs(raw: string | null, now: number): number {
     return 0;
   }
   if (/^\d+(?:\.\d+)?$/u.test(raw)) {
-    return Math.min(Number(raw) * 1000, 24 * 60 * 60 * 1000);
+    return Math.min(Number(raw) * 1000, Number.MAX_SAFE_INTEGER - now);
   }
   const date = Date.parse(raw);
-  return Number.isFinite(date) ? Math.min(Math.max(0, date - now), 24 * 60 * 60 * 1000) : 0;
+  return Number.isFinite(date) ? Math.max(0, date - now) : 0;
 }
 
 /** The redirect target if it keeps the same scheme, host and port; undefined otherwise. */
