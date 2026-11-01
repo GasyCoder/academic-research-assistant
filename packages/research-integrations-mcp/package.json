@@ -1,0 +1,39 @@
+{
+  "name": "@gasycoder/research-integrations-mcp",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Read-only scholarly metadata integrations (Crossref, OpenAlex, Zotero) and optional local Vale linting, with a separate stdio MCP server.",
+  "type": "module",
+  "bin": {
+    "research-integrations-mcp": "./dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/service.d.ts",
+      "import": "./dist/service.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.test.json --noEmit",
+    "test": "vitest run",
+    "test:live": "ARA_LIVE_INTEGRATIONS=1 vitest run tests/live.test.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "^2.4.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "2.4.0",
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  }
+}
