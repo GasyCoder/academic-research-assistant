@@ -1,173 +1,134 @@
 # Academic Research Assistant
 
-Open-source toolkit for AI-assisted academic writing and scientific manuscript review.
+A public toolkit for researchers, PhD students and scientific authors: academic writing,
+scientific structure review and evidence-bound citation review, with optional local linguistic
+tools and external metadata checks. It supports declared project context across disciplines.
 
-The project aims to provide reusable tools and skills for researchers, PhD students, academics, and scientific authors across multiple disciplines.
+**License:** [Apache-2.0](LICENSE), explicitly selected by the owner.
+All npm packages remain private and unpublished. Runtime/plugin version **0.4.0** is
+prepared on `release/0.4.0-prep`; it is not a published release or tag.
+Private security reporting still needs owner activation and verification before publication.
+[Third-party licences and notices](docs/third-party-notices.md) remain applicable.
+See [distribution status](docs/distribution.md) and the [release checklist](docs/releasing.md).
 
-## Architecture
+## Capabilities
 
-The project separates:
+| Component | Purpose |
+| --- | --- |
+| [Academic Writing](skills/academic-writing/SKILL.md) | Proofreading, clarity and argumentation; preserves meaning, numbers and citations |
+| [Scientific Review](skills/scientific-review/SKILL.md) | Evidence-bound alignment of question, methods, results and conclusions; no validity verdict |
+| [Citation Integrity](skills/citation-integrity/SKILL.md) | Internal reference consistency; authorized metadata evidence stays distinct from claim support |
+| [Research Profile](skills/research-profile/SKILL.md) | Optional declared context; no secrets or inferred preferences |
+| [Discipline Profiles](docs/discipline-profiles.md) | Five optional generic guidance profiles, selected explicitly |
+| [Document Formats](docs/document-formats.md) | Local Markdown, conservative LaTeX and read-only DOCX inspection with protected prose and UTF-16 locations |
+| [LanguageTool MCP](packages/languagetool-mcp/README.md) | Separate local LanguageTool adapter: health, languages, text and long-document diagnostics |
+| [Research Integrations](docs/research-integrations.md) | Separate read-only Crossref, OpenAlex and Zotero tools, plus optional local Vale lint |
 
-- **MCP tools** — deterministic technical capabilities such as linguistic analysis.
-- **Academic Skills** — contextual reasoning for scientific writing, methodology, citations, document types, and disciplines.
-- **Research Profiles** — dynamic project-specific configuration without hard-coding a research topic.
-- **Discipline Profiles** — optional generic guidance, separate from project-specific context.
+Skills require a compatible AI host; they are instructions, not autonomous programs. This
+repository supplies no LLM service. There is no document writer, PDF parser, TeX compiler,
+automatic bibliography correction, universal reference-validity verdict or metadata-based
+proof that a source supports a claim.
 
-## Initial components
+## Requirements and quick start
 
-Initial components:
+Use an official full-ICU Node.js build. Node **20 and 22** are tested; Node 22 is recommended
+for this release. Validation used npm 10.8.2 with Node 20 and npm 11.11.0 with Node 22;
+other npm versions and operating systems have not been separately certified. CI runs on
+Ubuntu Linux. Java, LanguageTool, Vale and provider credentials are optional.
 
-- LanguageTool MCP server (available)
-- Academic Writing Skill (available, see below)
-- Scientific Review Skill (available, see below)
-- Research Profile Skill (available, see below)
-- Citation Integrity Skill (available, see below)
-- Document Formats library (Markdown, LaTeX and DOCX inspection; see below)
-- Research Integrations MCP (opt-in metadata reads and optional local Vale; see below)
+Development uses Vitest **4.1.12**, bounded to the 4.1 patch line. Its locked Vite dependency
+requires Node **20.19+ or 22.12+** on the tested lines. Use a recent full-ICU Node 20 or 22
+build and `npm ci --engine-strict`. This resolves the historical Vitest 5 / Node 20 issue
+recorded in the [Phase 10 audit](docs/distribution-audit.md).
 
-## LanguageTool MCP server
-
-`packages/languagetool-mcp` is a stdio MCP server for a locally installed LanguageTool
-instance. It exposes four tools: `health_check`, `get_supported_languages`, `check_text`
-(texts up to 50,000 characters) and `check_document` (longer documents up to 100,000
-characters, checked part by part with bounded results). It returns structured diagnostics
-and never rewrites text.
-
-### Getting started
-
-Prerequisites:
-
-- Node.js 20 or later, from an official build (they include the ICU data the server needs).
-  Node 20 and 22 are tested in CI; Node 22 or later is recommended, as Node 20 reached its
-  end of life in April 2026.
-- Java 17 or later, to run LanguageTool.
-- LanguageTool, downloaded from <https://languagetool.org/download/> and unzipped. The server
-  was tested with LanguageTool 6.9-SNAPSHOT.
-
-1. Install and build the MCP server:
-
-   ```bash
-   git clone https://github.com/GasyCoder/academic-research-assistant.git
-   cd academic-research-assistant
-   npm ci
-   npm run build
-   ```
-
-2. Start LanguageTool from its unzipped directory (it listens on `127.0.0.1` only by default):
-
-   ```bash
-   java -cp languagetool-server.jar org.languagetool.server.HTTPServer --port 8081
-   ```
-
-3. Start the MCP server, or let an MCP client start it. It talks MCP over stdin/stdout:
-
-   ```bash
-   LANGUAGETOOL_BASE_URL=http://127.0.0.1:8081 node packages/languagetool-mcp/dist/index.js
-   ```
-
-   `LANGUAGETOOL_BASE_URL` (default `http://127.0.0.1:8081`) and `LANGUAGETOOL_TIMEOUT_MS`
-   (default `30000`) are optional.
-
-4. Register it in an MCP client with the absolute path of `dist/index.js`, e.g. Claude Code:
-
-   ```bash
-   claude mcp add languagetool -e LANGUAGETOOL_BASE_URL=http://127.0.0.1:8081 \
-     -- node /absolute/path/to/academic-research-assistant/packages/languagetool-mcp/dist/index.js
-   ```
-
-Use `check_text` for a text of up to 50,000 characters, checked in one request, and
-`check_document` for a longer document of up to 100,000 characters: it is split internally,
-reports offsets in the whole document and bounds its result, so check its `complete` flag.
-
-Configuration, tools, limits, cold start and client setup in detail:
-[packages/languagetool-mcp/README.md](packages/languagetool-mcp/README.md).
-
-### Development
-
-```bash
-npm run check              # what CI runs: skill and profile validation, typecheck, tests, build, npm package check
-npm run validate:profiles  # research profiles; add -- path/to/profile.yaml for a given file
-npm run validate:disciplines # shipped discipline profiles and id/alias uniqueness
-npm run test:integration   # against a real LanguageTool on LANGUAGETOOL_BASE_URL
+```sh
+git clone https://github.com/GasyCoder/academic-research-assistant.git
+cd academic-research-assistant
+npm ci
+npm run build
+node examples/read-document.mjs
 ```
 
-Versioning and releases: [docs/releasing.md](docs/releasing.md).
+The last command produces a first local result: a synthetic typo mapped through bold markup
+to an **unapplied** proposal. It needs no LanguageTool, Vale, provider account or AI host.
+Installation needs npm registry access or a prepared cache; the example itself uses no network
+and changes no input. [Worked workflow and profiles](examples/README.md).
 
-## Academic Writing Skill
+## Use the Skills in Claude Code
 
-[`skills/academic-writing`](skills/academic-writing/SKILL.md) reviews and improves scholarly
-prose in any discipline and language: clarity, precision, concision, coherence, register,
-argumentation and paragraph structure. It uses the LanguageTool MCP tools for linguistic
-diagnostics and keeps the academic judgement to itself. It preserves the author's meaning,
-numbers and citations, and never invents sources, data or findings. Manual validation
-scenarios are in [`evaluation/scenarios.md`](skills/academic-writing/evaluation/scenarios.md).
+After cloning, load the local Skills plugin:
 
-## Scientific Review Skill
+```sh
+claude plugin validate .
+claude --plugin-dir .
+```
 
-[`skills/scientific-review`](skills/scientific-review/SKILL.md) reviews how a manuscript,
-thesis chapter or set of sections holds together: alignment between question, methods,
-results, discussion and conclusions, scope of claims, limitations, and consistency across
-sections and numbers. It judges only the text provided, quotes its evidence, states which
-sections it could not review, and gives no verdict on validity, no score and no acceptance
-recommendation. Wording is left to the Academic Writing Skill and reference checking to
-Citation Integrity. Validation scenarios:
-[`evaluation/scenarios.md`](skills/scientific-review/evaluation/scenarios.md).
+For example, in that session:
 
-## Citation Integrity Skill
+```text
+/academic-research-assistant:academic-writing Review clarity in examples/manuscript.md; do not rewrite or perform external lookups.
+```
 
-[`skills/citation-integrity`](skills/citation-integrity/SKILL.md) checks internal consistency
-of visible citations, references and attribution in supplied materials: author-date and
-numeric matching, ambiguous or missing matches, duplicates and scoped orphan references.
-It distinguishes an internal match from actual claim support, comparing source passages
-only when supplied. Explicitly requested metadata checks can use the separate research
-integration tools when available. Ordinary reviews stay local; provider absence is never
-fabrication, and metadata cannot prove claim support. No invented metadata or automatic
-misconduct accusations. Validation
-scenarios: [`evaluation/scenarios.md`](skills/citation-integrity/evaluation/scenarios.md).
+Four Skills are discovered under `skills/`. No MCP or hook starts automatically; no
+marketplace is configured/published. Keep the full clone, including linked docs, schemas and
+profiles. Root CLAUDE.md is developer guidance, not plugin context. See
+[client/plugin setup](docs/client-setup.md) for details and manual MCP registration.
 
-## Research Profile
+## Optional local LanguageTool
 
-A research profile is a YAML file declaring the context of a research project (discipline,
-methodology, document type, language variant, citation style, voice, section conventions,
-venue requirements, terminology) that the academic Skills follow when it is provided. It only
-holds what the user states or confirms; an absent field means unknown, and the Skills then
-use general conventions. The [Research Profile Skill](skills/research-profile/SKILL.md) creates
-and updates profiles with the user's consent.
+LanguageTool is **installed separately**, not bundled in npm. The tested LanguageTool
+6.9-SNAPSHOT setup uses Java 17 or later. From its downloaded, unzipped directory:
 
-- Format: [`schemas/research-profile.schema.json`](schemas/research-profile.schema.json),
-  described in [profile-format.md](skills/research-profile/references/profile-format.md).
-- Example: [`profiles/default.yaml`](profiles/default.yaml).
-- Real profiles: `profiles/local/`, ignored by Git. Never commit a real profile, and never
-  store secrets or unneeded personal data in one.
+```sh
+java -cp languagetool-server.jar org.languagetool.server.HTTPServer --port 8081
+```
 
-## Discipline Profiles
+From this repository, start the stdio MCP or let a compatible host start it:
 
-Five optional [Discipline Profiles](docs/discipline-profiles.md) provide conditional writing
-and review conventions. They are generic project-maintained guidance, separate from a
-Research Profile's declared project context. Select one explicitly with
-`discipline.profileId` or a current instruction; absent or unavailable guidance uses general
-Skill conventions. Explicit instructions, venue/document requirements and the Research
-Profile take precedence. Profiles establish no scientific-validity verdict or mandatory method.
+```sh
+LANGUAGETOOL_BASE_URL=http://127.0.0.1:8081 node packages/languagetool-mcp/dist/index.js
+```
 
-## Document Formats
+Use `health_check` and `get_supported_languages` in your host before linguistic checks.
+Health establishes liveness, not language-loading readiness. If LanguageTool is absent,
+tools report unavailability and Skills can review manually. stdout is protocol-only.
+[Detailed setup and limits](packages/languagetool-mcp/README.md).
 
-[`packages/document-formats`](docs/document-formats.md) provides local structured reading of
-Markdown, conservative LaTeX inspection and read-only DOCX extraction. It retains section
-and passage locations, protected content and coverage limits; prose segments map LanguageTool
-diagnostics back to their source. It returns findings locations and replacement proposals,
-without editing originals, compiling TeX, rendering documents or promising DOCX write-back.
-The ordinary workspace tests, typecheck and build include this library.
+## A small review workflow
 
-## Research Integrations
+1. Optionally copy a [synthetic profile](examples/README.md) into ignored `profiles/local/`;
+   declare only what you know and validate it. [Profile format](skills/research-profile/references/profile-format.md).
+2. Supply a passage/document and request Academic Writing or Scientific Review at the intended
+   scope. Optional discipline guidance needs explicit selection; no profile is required.
+3. Citation Integrity inventories supplied citations/bibliography without inventing entries.
+   Authorize specific metadata checks separately; ordinary review stays local.
 
-[`packages/research-integrations-mcp`](docs/research-integrations.md) is a separate read-only
-MCP server for Crossref DOI/search, OpenAlex work lookup/search, Zotero item/search and
-optional local Vale prose lint. Metadata tools require explicit per-call network consent;
-they retain provider provenance, ambiguity and disagreements. Keys remain environment
-configuration. No library/document writes, silent manuscript transmission, publisher scraping,
-Vale installation/sync or universal reference-validity verdict is provided. The ordinary
-workspace checks use fake servers/executables; live provider tests are separately opt-in.
+[Document contracts](docs/document-formats.md) and [integration setup](docs/research-integrations.md)
+describe available structure, mapping and tool limits. Both MCPs also work with a generic
+compatible stdio MCP host; Claude Code is optional.
 
-## Status
+## Privacy and limits
 
-Early development / architecture phase.
+Parsing is local. A remote configured LanguageTool receives submitted prose; your AI host
+has its own data policy. Authorized providers receive only necessary bibliographic fields or
+selected library identifiers. Zotero is read-only, Vale is local, and ordinary review never
+automatically uploads manuscripts to bibliographic providers. Keys stay out of profiles/Git.
+
+[Configuration](docs/configuration.md), [privacy/threat boundaries](docs/privacy-and-security.md)
+and [security reporting](SECURITY.md) describe guarantees and limits. Conservative TeX,
+incomplete Word styles/layout, unavailable services and partial supplied sections must be
+reported as coverage limits. A missing record is never proof of fabrication.
+
+## Development
+
+```sh
+npm run check                  # validators, typecheck, tests, build, tarball/install checks
+npm run validate:distribution  # versions, local links, plugin and synthetic profiles
+npm run pack:check             # independent tarball installation and import/bin smoke tests
+```
+
+Standard tests use local fake services/executables. Install checks may use npm, never live
+providers. [Live tests](docs/configuration.md#opt-in-test-controls) remain separately opt-in.
+See [CONTRIBUTING](CONTRIBUTING.md), [CHANGELOG](CHANGELOG.md), [architecture](docs/architecture.md),
+[roadmap](docs/roadmap.md) and [release preparation](docs/releasing.md). These checks never
+publish, tag or release anything.

@@ -27,7 +27,8 @@ node packages/languagetool-mcp/dist/index.js
 ```
 
 The package is a command (`languagetool-mcp`, i.e. `dist/index.js`), not a library: it has no
-importable API. It is not published on npm yet (see [docs/releasing.md](../../docs/releasing.md)).
+importable API. It uses [Apache-2.0](LICENSE) and remains private and unpublished. See the
+[repository release procedure](https://github.com/GasyCoder/academic-research-assistant/blob/main/docs/releasing.md).
 
 During development, `npm run dev -w @gasycoder/languagetool-mcp` runs the TypeScript sources with `tsx`.
 

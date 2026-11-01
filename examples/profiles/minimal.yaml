@@ -1,0 +1,4 @@
+# Synthetic example: absent fields remain unknown.
+profileVersion: 1
+language:
+  primary: en

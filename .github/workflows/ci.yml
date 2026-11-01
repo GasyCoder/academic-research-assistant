@@ -45,13 +45,16 @@ jobs:
         run: npm run validate:skills
 
       - name: Install
-        run: npm ci
+        run: npm ci --engine-strict
 
       - name: Validate research profiles
         run: npm run validate:profiles
 
       - name: Validate discipline profiles
         run: npm run validate:disciplines
+
+      - name: Validate distribution resources and versions
+        run: npm run validate:distribution
 
       - name: Typecheck
         run: npm run typecheck
@@ -64,5 +67,8 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Check the npm package
+      - name: Run the offline example
+        run: npm run example:check
+
+      - name: Check private tarballs and independent installations
         run: npm run pack:check

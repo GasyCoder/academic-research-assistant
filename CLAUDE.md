@@ -2,7 +2,8 @@
 
 ## Project
 
-Academic Research Assistant is a generic, open-source academic research assistant.
+Academic Research Assistant is a generic public research toolkit licensed under Apache-2.0,
+explicitly selected by its owner. Packages remain private; licence adoption does not authorize publication.
 
 It must remain reusable across:
 
@@ -73,7 +74,8 @@ Do not hard-code researcher-specific information into reusable Skills.
 
 ## Current phase
 
-The repository is in its initial architecture phase.
+Phases 0–10 are implemented and audited. Owner-authorized 0.4.0 release preparation and gates are documented
+in docs/distribution.md; do not infer permission to publish, tag or choose a licence.
 
 Before implementing a feature:
 

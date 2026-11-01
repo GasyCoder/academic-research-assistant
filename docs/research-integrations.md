@@ -21,7 +21,7 @@ Skills reason  →  integrations retrieve  →  Skills interpret
 Why a separate package rather than new tools in `packages/languagetool-mcp`: LanguageTool MCP
 must stay a LanguageTool adapter, without bibliographic or network-provider knowledge. One
 package holds both the small library (`createIntegrations`) and its MCP facade, so the transport
-rules are written once. Its version follows the repository version (currently 0.3.0,
+rules are written once. Its version follows the repository version (currently prepared 0.4.0,
 [releasing.md](releasing.md)); it stays `private` and nothing is published in this phase.
 
 ## Setup
