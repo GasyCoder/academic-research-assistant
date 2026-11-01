@@ -286,6 +286,15 @@ describe('Zotero', () => {
     expect(JSON.stringify(result)).not.toMatch(/SYNTHETIC_PRIVATE/u);
   });
 
+  it('accepts a numeric library id and normalizes it, but no other shape', async () => {
+    const { service, server } = await setup((_req, res) => json(res, zoteroItem()));
+    expect((await service.zoteroGet({ ...library, libraryId: 123, itemKey: 'ABCD1234' })).status).toBe('exact_match');
+    expect(server.requests[0]!.url.startsWith('/users/123/items/')).toBe(true);
+    for (const libraryId of [-1, 1.5, '01', 'me', '123/../x']) {
+      await expect(service.zoteroGet({ ...library, libraryId, itemKey: 'ABCD1234' })).rejects.toThrow('Invalid integration input');
+    }
+  });
+
   it('H: refuses a private web read without a configured key before any request', async () => {
     const { service, server } = await setup((_req, res) => json(res, zoteroItem()));
     const result = await service.zoteroGet({ ...library, itemKey: 'ABCD1234', access: 'private' });

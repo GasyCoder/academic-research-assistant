@@ -158,7 +158,10 @@ export const openalexSearchSchema = z
 const libraryShape = {
   libraryType: z.enum(['users', 'groups']),
   /** Numeric Zotero library id (not a username). 0 is accepted by the local API for "my library". */
-  libraryId: z.string().regex(/^(?:0|[1-9]\d{0,11})$/u),
+  libraryId: z
+    .union([z.string(), z.number().int().nonnegative().max(999_999_999_999)])
+    .transform(String)
+    .pipe(z.string().regex(/^(?:0|[1-9]\d{0,11})$/u)),
   access: z.enum(['public', 'private']).default('public'),
   mode: z.enum(['web', 'local']).default('web'),
   networkConsent,
