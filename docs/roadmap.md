@@ -15,7 +15,7 @@ technical readiness and owner release/licence gates are tracked separately.
 | 7 — Discipline Profiles | Explicitly selected generic guidance and validation; complete |
 | 8 — Document Formats | Local Markdown, conservative LaTeX, read-only DOCX and source mapping; complete |
 | 9 — Research Ecosystem Integrations | Read-only Crossref/OpenAlex/Zotero, explicit provenance/consent and optional Vale; complete |
-| 10 — Distribution & Release Readiness | Local plugin, install/docs/examples, package/link/version checks and release preparation; pending independent audit and owner actions |
+| 10 — Distribution & Release Readiness | Local plugin, install/docs/examples, package/link/version checks and release preparation; [final audit completed](distribution-audit.md), owner actions pending, Node 20 tooling issue recorded |
 
 No new academic feature/provider/parser is introduced in Phase 10. Current distribution is
 clone/local, packages private. [Licence/publication gates](distribution.md#release-gates)

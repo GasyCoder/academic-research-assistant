@@ -5,7 +5,11 @@ repository. The owner must resolve that before a distributable release.
 
 Use a focused branch from main, preserve unrelated work and keep commits atomic. Read
 README, CLAUDE, AGENTS and docs/architecture before code changes. Install with `npm ci`
-on a tested Node 20/22 full-ICU build, then `npm run check`. Standard tests need no Java/key;
+on an official full-ICU Node 22 build, version 22.12 or later, then `npm run check`.
+Node 20 compatibility checks pass with an `EBADENGINE` warning, but the locked Vitest 5
+does not support Node 20 and strict-engine development installation fails. See the
+[audit finding](docs/distribution-audit.md#development-toolchain-node-20) before changing
+the toolchain or its supported versions. Standard tests need no Java/key;
 tarball checks use npm, not live providers.
 
 Keep infrastructure, linguistic engines, reasoning, formats and profiles separate. Validate

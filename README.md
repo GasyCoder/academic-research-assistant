@@ -34,6 +34,12 @@ for this release. Validation used npm 10.8.2 with Node 20 and npm 11.11.0 with N
 other npm versions and operating systems have not been separately certified. CI runs on
 Ubuntu Linux. Java, LanguageTool, Vale and provider credentials are optional.
 
+For development, use **Node 22.12 or later on the tested Node 22 line**. On Node 20,
+the locked Vitest 5 reports `EBADENGINE`: ordinary checks passed, but Vitest does not
+declare support for that runtime and `npm ci --engine-strict` fails. Installed runtime
+tarballs passed a separate strict-engine Node 20 install. See the
+[final distribution audit](docs/distribution-audit.md) for this outstanding tooling issue.
+
 ```sh
 git clone https://github.com/GasyCoder/academic-research-assistant.git
 cd academic-research-assistant

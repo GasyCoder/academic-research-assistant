@@ -8,7 +8,9 @@ by the owner's instruction; no LICENSE or SPDX licence field has been added.
 ## Readiness and owner gates
 
 Overall readiness: **READY AFTER OWNER ACTION**, with technical checks passed as recorded
-below and independent audit still required. An open licence decision is a **BLOCKER** for open-source release, even
+below and the subsequent [final audit](distribution-audit.md) recorded separately.
+That audit found a Node 20 development-toolchain **SHOULD FIX**, described below.
+An open licence decision is a **BLOCKER** for open-source release, even
 when technical checks pass. Owner must select the licence, approve version/distribution
 surfaces and complete the [release procedure](releasing.md). A private security reporting
 channel/maintenance policy SHOULD be settled; Code of Conduct/listing icon and broader OS
@@ -154,6 +156,13 @@ The clean source snapshot contains only versioned/candidate files, with no local
 env, builds or node_modules. Its install/check and nested tarball projects demonstrate no
 essential dependency on ignored host state. Local raw logs/snapshots stay outside Git.
 No test result overrides the owner's explicit licence deferral or publication gates.
+
+The final audit reproduced both clean-source checks, but also observed `EBADENGINE` from
+Vitest 5.0.5 under Node 20.20.2. Vitest declares Node `^22.12.0 || ^24.0.0 || >=26.0.0`;
+strict-engine source installation fails, whereas strict-engine installation of the three
+runtime tarballs succeeds under Node 20. Use the tested Node 22 line for development until
+the toolchain policy is resolved. Passing Node 20 tests does not establish upstream Vitest
+support. No dependency upgrade/downgrade or runtime support change was made by the audit.
 
 The [release checklist](releasing.md) is preparation for owner use, not an action performed
 by this phase. Final commit hashes and observed Git state are supplied in the handoff.
