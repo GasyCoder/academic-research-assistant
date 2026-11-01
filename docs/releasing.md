@@ -6,6 +6,7 @@ Prepared runtime/plugin version: **0.4.0**, unreleased; latest historical tag: v
 The owner approved this pre-1.0 minor because optional capabilities were added after the LanguageTool baseline
 and public stability/distribution policies remain pre-1.0. [Draft notes](release-notes-0.4.0-draft.md).
 Observed results and remaining gates: [0.4.0 preparation record](release-preparation-0.4.0.md).
+Final countercheck and procedure correction: [release preparation audit](release-preparation-0.4.0-audit.md).
 
 ## Version contract
 
@@ -52,20 +53,36 @@ policy applies. Do not use an all-workspaces bump that changes the internal libr
    trusted installed rules. Record exactly what ran and which checks were skipped.
 5. Finalize changelog/release notes, maintenance policy and actual distribution targets.
    The owner must [activate and verify private security reporting](../SECURITY.md#owner-activation-checklist)
-   before public release: its last read-only status was `enabled: false` on 2026-11-01.
+   **before merge or release**: confirm `enabled: true` and a reporter-accessible private
+   form, then record the verification. Its last read-only status was `enabled: false`
+   on 2026-11-01. Do not treat a documentation update as activation.
    Open a focused release PR; require green CI for Node 20/22 and owner
-   review of versions, licence, package contents, notes and clean-room evidence. Merge only
-   with the separately authorized maintainer process.
-6. From the reviewed **clean main commit**, the owner may explicitly authorize creation/push
-   of the selected version tag and a GitHub Release with the reviewed notes. Confirm no
-   newer unreviewed changes entered main. Tagging/pushing/creating a Release were not done
-   by Phase 10 and are not automatic CI steps.
-7. npm publication is a separate decision. Root and formats remain internal; for each MCP
-   selected for publication, review a separate change to private/license/package metadata
-   and packaging gates, then repeat checks. The current validator intentionally refuses
-   private=false, so any publication-policy change must be explicit and reviewed. Only then
-   authorize a specific package/tag publication with owner-managed credentials. No npm token
-   or automatic release workflow is configured. Do not publish root or every workspace.
+   review of versions, licence, package contents, notes and clean-room evidence. Any npm
+   publication-policy/metadata changes need approval, a reviewed commit and repeated checks
+   before selecting a release tag commit. Merge only through the separately authorized
+   maintainer process, after the security gate above.
+6. On the reviewed **clean main commit**, wait for main CI to pass on **both Node 20 and 22
+   for that exact commit**. Recheck root, both MCP manifests/serverInfo, plugin and lockfile
+   at 0.4.0, internal Formats at 0.1.0, licence metadata and intended private flags. If another
+   release commit or any change is needed, review it and repeat the checks/main CI before
+   tagging; no newer unreviewed commit may enter the release.
+
+   Only after these gates may the owner explicitly authorize an **annotated** v0.4.0 tag
+   on that exact commit, following the repository's historical annotated-tag policy.
+   Use a signed annotated tag only when the maintainer has configured/approved signing.
+   Verify the tag target and annotation before any separately authorized tag push.
+7. npm publication is optional and separately authorized for specific MCP packages, never
+   root/internal Formats or every workspace. All packages in the current preparation remain
+   private: **skip this step** unless a publication-policy change was approved, committed,
+   checked and included in the reviewed tag commit through steps 5–6. The current validator
+   intentionally refuses private=false; changing that policy requires explicit review.
+   Publish only the approved artifacts from the clean tagged commit with owner-managed
+   credentials. Do not edit private/version metadata after tagging and publish different
+   untagged contents as that release. Later policy changes require a later reviewed release.
+8. Only after the reviewed tag has been pushed, and any explicitly selected npm publication
+   has completed, may the owner separately authorize a GitHub Release from that tag with
+   the reviewed notes. If npm publication was not selected, it is not a GitHub Release gate.
+   No tag, push, npm publication or GitHub Release is performed by these instructions or CI.
 
 The package scripts themselves do not tag/push/publish. [Distribution gates](distribution.md#release-gates)
 remain visible even when technical checks pass. No marketplace exists: clone/local plugin
