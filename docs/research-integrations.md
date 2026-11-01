@@ -172,14 +172,16 @@ Deterministic and explainable, one state per field: `matched`, `mismatch`, `inco
   `inconclusive`.
 - **Authors:** only an identical full multi-word name matches. A lone surname, initials,
   diacritic variants or a different name are `inconclusive`, never `mismatch`: names neither
-  prove nor disprove identity. ORCIDs are retained, never inferred.
+  prove nor disprove identity. Identical initial strings and structured family-only names
+  remain inconclusive too, including multi-word surnames. ORCIDs are retained, never inferred.
 - **Years:** equal to the primary year → `matched`; equal to another retained date
   (online, print, issue) → `inconclusive` with the date named; otherwise `mismatch`, noting that
   a year difference is not by itself an error. Crossref's primary year comes from `issued`,
   then `published`, `published-print`, `published-online`. Searches with a year filter use
   ±1 year for the same reason.
 - **Provider disagreement:** keep every record and its provenance, report the differing
-  values, recommend human verification. No majority vote, no provider is "more true".
+  values, recommend human verification. DOI comparison retains significant suffix punctuation;
+  title punctuation rules are not applied to identifiers. No majority vote, no provider is "more true".
 
 **Metadata alone cannot verify claim support.** Matching DOI, title and authors say nothing
 about what the source says. No abstracts or full text are returned; source-content evidence
@@ -258,13 +260,16 @@ fixed message that does not repeat them. Never commit credentials or a `.env` fi
   its whole MCP envelope, is capped at 512 KiB. Searches return at most 20 records.
 - **Redirects:** none, except up to two same-origin redirects for OpenAlex lookups. A redirect
   to another origin, scheme or port, or with credentials in its URL, is never followed
-  (`REDIRECT_BLOCKED`), so no key or `Authorization` header reaches another origin.
+  (`REDIRECT_BLOCKED`), so no key or `Authorization` header reaches another origin. Every hop
+  respects pacing and provider cooldowns; the timeout remains active during redirect pacing.
 - **Retries: none.** One request per origin at a time, through a queue of at most four
   calls (more get `BUSY`). Pacing waits briefly (250 ms minimum interval, or Crossref's
   advertised rate; at most 2 s). A provider-requested delay — `Backoff`, `Retry-After`, or 1 s
   after a 429/503 without one — is never slept through: calls during it return
   `rate_limited` / `CLIENT_COOLDOWN` with `retryAfterMs`. Whether to try again is the caller's
-  decision; there is no retry loop.
+  decision; there is no retry loop. Provider delays longer than a day are retained, up to the
+  safe numeric timestamp ceiling. Advertised rate counts must be positive safe integers and
+  intervals finite, positive and at most 60 seconds; malformed hints are ignored.
 - **Cache:** in memory, per process, at most 32 Crossref/OpenAlex responses for the TTL, keyed by
   request URL. Zotero is never cached. Consent is checked before the cache.
 - **Errors:** fixed codes and messages, optional HTTP status and retry delay. Upstream bodies,
@@ -274,7 +279,8 @@ fixed message that does not repeat them. Never commit credentials or a `.env` fi
   stdout. If a provider echoes one into a returned value, raw or percent-encoded (fully, partly,
   any case), that whole value becomes `[REDACTED]`. Only free-form values are inspected;
   property names, statuses and codes stay intact. Deliberate obfuscation beyond percent-encoding
-  is not covered.
+  is not covered. Nested percent-encoding is decoded to a fixed point on bounded strings,
+  without an arbitrary three-layer cutoff.
 - **SSRF:** destinations are the fixed official endpoints above. No tool or environment variable
   sets a base URL; only the internal test harness can point providers at a literal loopback
   HTTP address.
