@@ -1,0 +1,31 @@
+# Synthetic declared project context, never a real researcher's profile.
+profileVersion: 1
+id: synthetic-project
+project:
+  title: Synthetic scheduling study
+  topic: How volunteers describe scheduling decisions
+  source: stated
+discipline:
+  name: Interdisciplinary studies
+  source: stated
+methodology:
+  approaches: [qualitative]
+  methods: [interviews]
+  source: stated
+document:
+  type: article
+  currentSection: Discussion
+language:
+  primary: en
+  variant: en-GB
+citationStyle:
+  name: Author-date
+voice:
+  preference: first-person-plural
+sections:
+  resultsAndDiscussion: combined
+venue:
+  abstractWordLimit: 200
+  styleNotes: [Synthetic example requirement only]
+terminology:
+  protected: [Model X]
